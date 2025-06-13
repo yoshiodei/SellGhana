@@ -1,4 +1,4 @@
-import { getAuth, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase/firebase';
 import { showToast } from '@/utils/showToast';
 
