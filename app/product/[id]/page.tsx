@@ -110,7 +110,7 @@ export default function ProductPage() {
             collection(db, "productListing"),
             where("category", "==", productData.category),
             where("id", "!=", productId),
-            limit(5),
+            limit(6),
           )
 
           const similarProductsSnapshot = await getDocs(similarProductsQuery)
@@ -454,7 +454,7 @@ export default function ProductPage() {
         {similarProducts.length > 0 && (
           <div className="mt-16">
             <h2 className="mb-6 text-2xl font-bold">Similar Products</h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
               {similarProducts.map((similarProduct) => (
                 <ProductCard key={similarProduct.id} product={similarProduct} />
               ))}
