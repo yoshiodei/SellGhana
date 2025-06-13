@@ -6,8 +6,7 @@ import { onAuthStateChanged, reload, sendEmailVerification } from "firebase/auth
 import { auth } from "@/lib/firebase/firebase";
 import SimpleNavBar from "@/components/simple-nav-bar";
 import SimpleFooter from "@/components/simple-footer";
-import { logout } from "@/lib/auth/utils/logOut";
-
+import { logout } from "@/lib/auth/utils/logout";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
