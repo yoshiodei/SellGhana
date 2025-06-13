@@ -179,7 +179,7 @@ export default function Home() {
           <h2 className="mb-6 text-2xl font-bold">Featured Products</h2>
 
           {loading ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
               {[...Array(5)].map((_, index) => (
                 <div key={index} className="animate-pulse">
                   <div className="bg-gray-200 rounded-lg aspect-square"></div>
@@ -189,7 +189,7 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-6 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
               {products.map((product) => (
                 <ProductCard 
                   key={product.id} 

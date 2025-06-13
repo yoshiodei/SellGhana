@@ -57,7 +57,7 @@ export default function WishlistPage() {
         <h1 className="mb-6 text-2xl font-bold">My Wishlist</h1>
 
         {loading || wishlistLoading ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
             {[...Array(4)].map((_, index) => (
               <div key={index} className="animate-pulse">
                 <div className="bg-gray-200 rounded-lg aspect-square"></div>
@@ -67,7 +67,7 @@ export default function WishlistPage() {
             ))}
           </div>
         ) : products.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
