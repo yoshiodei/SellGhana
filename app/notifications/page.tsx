@@ -10,6 +10,7 @@ import { markAllAsRead } from "@/lib/redux/slices/notificationsSlice"
 export default function NotificationsPage() {
   const dispatch = useAppDispatch()
   const notifications = useAppSelector((state) => state.notifications.items)
+  
 
   const handleMarkAllAsRead = () => {
     dispatch(markAllAsRead())
@@ -44,7 +45,7 @@ export default function NotificationsPage() {
 
           {/* Notifications List */}
           <div className="overflow-hidden bg-white rounded-lg shadow">
-            {notifications.map((notification) => (
+            {/* {notifications.map((notification) => (
               <Link
                 key={notification.id}
                 href={`/notifications/${notification.id}`}
@@ -64,9 +65,9 @@ export default function NotificationsPage() {
                   <p className="mt-1 text-xs text-gray-500">{notification.time}</p>
                 </div>
               </Link>
-            ))}
+            ))} */}
 
-            {notifications.length === 0 && (
+            {notifications.length === 0 || true && (
               <div className="flex flex-col items-center justify-center p-8 text-center">
                 <div className="p-3 mb-4 bg-gray-100 rounded-full">
                   <Bell className="w-8 h-8 text-gray-400" />
