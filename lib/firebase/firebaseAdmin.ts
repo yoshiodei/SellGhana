@@ -13,7 +13,6 @@ const app = !admin.apps.length
 export const adminAuth = app.auth();
 export const adminDB = app.firestore();
 
-
 // import admin from "firebase-admin";
 
 // if (!admin.apps.length) {
