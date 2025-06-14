@@ -14,6 +14,7 @@ import { useParams, useRouter } from "next/navigation"
 import { getUserData, getUserListings } from "@/utils/dataFetch"
 import { FirebaseProduct } from "@/lib/firebase/firestore"
 import LoadingSpinner from "@/components/loading-spinner"
+import { formatDistanceToNow } from 'date-fns';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -31,6 +32,21 @@ export default function ProfilePage() {
     image: "/placeholder.svg?height=96&width=96",
     createdAt: '',
   })
+
+  function getPostedTimeFromFirestore(timestamp: any): string {
+    if (!timestamp || typeof timestamp.toDate !== "function") return "posted some time ago";
+  
+    const date = timestamp.toDate();
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000); // seconds
+  
+    if (diff < 60) return "posted just now";
+    if (diff < 3600) return `posted ${Math.floor(diff / 60)} mins ago`;
+    if (diff < 86400) return `posted ${Math.floor(diff / 3600)} hours ago`;
+    if (diff < 2592000) return `posted ${Math.floor(diff / 86400)} days ago`;
+    if (diff < 31536000) return `posted ${Math.floor(diff / 2592000)} months ago`;
+    return `posted ${Math.floor(diff / 31536000)} years ago`;
+  }
 
   const [showEditModal, setShowEditModal] = useState(false)
   
@@ -208,7 +224,7 @@ export default function ProfilePage() {
                     <h3 className="font-medium truncate">{item.name}</h3>
                     <p className="mt-1 font-medium">${(item.price).toFixed(2)}</p>
                     <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-gray-500">2 days ago</span>
+                      <span className="text-xs text-gray-500">{getPostedTimeFromFirestore(item.createdAt)}</span>
                       <span className="px-2 py-1 text-xs text-white bg-green-500 rounded-full">Active</span>
                     </div>
                   </div>
