@@ -48,6 +48,29 @@ export const fetchProductsByCategory = async (category: string) => {
   };
 
 
+   export const fetchJobList = async (type: string) => {
+      const validCategories = ['Services', 'Jobs'];
+
+      let q;
+    
+      if(validCategories.includes(type)){
+        q = query(
+          collection(db, "jobListing"),
+          where("category", "==", type.toLowerCase())
+        );
+      } else  {
+        q = collection(db, "jobListing")
+      }
+
+      const querySnapshot = await getDocs(q);
+      const jobs = querySnapshot.docs.map(doc => ({
+        ...doc.data(),
+      }))
+    
+      return jobs;
+   }
+  
+
   // returns date in format eg. May 22, 2025
   export const formatDate = (dateString: string): string | null => {
     try {

@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { format, isToday, isYesterday } from "date-fns"
 import Image from "next/image"
-import { MessageCircle, PlusCircle, Search, Send, ShoppingBag } from "lucide-react"
+import { MessageCircle, PlusCircle, Search, Send, MenuIcon } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import {
   subscribeToUserChats,
@@ -33,6 +33,7 @@ export default function ChatPage() {
   const [loadingChats, setLoadingChats] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [showMessage, setShowMessage] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesUnsubscribeRef = useRef<(() => void) | null>(null)
@@ -59,13 +60,13 @@ export default function ChatPage() {
       setLoadingChats(false)
 
       // If there's a chatId in URL, auto-select that chat
-      // if (chatIdFromUrl && userChats.length > 0) {
-      //   const targetChat = userChats.find((chat) => chat.id === chatIdFromUrl)
-      //   if (targetChat) {
-      //     console.log("Auto-selecting chat from URL:", targetChat.id)
-      //     handleChatSelect(targetChat)
-      //   }
-      // }
+      if (chatIdFromUrl && userChats.length > 0) {
+        const targetChat = userChats.find((chat) => chat.id === chatIdFromUrl)
+        if (targetChat?.id) {
+          console.log("Auto-selecting chat from URL:", targetChat.id)
+          handleChatSelect(targetChat.id)
+        }
+      }
     })
 
     return unsubscribe
@@ -86,6 +87,7 @@ export default function ChatPage() {
     }
 
     // setSelectedChat(chat)
+    setShowMessage(true)
     setMessages(null) // Clear previous messages
     setLoadingMessages(true)
 
@@ -238,9 +240,9 @@ export default function ChatPage() {
 
       {/* Chat Interface */}
       <div className="container px-0 mx-auto">
-        <div className="flex h-[calc(100vh-64px)]">
+        <div className="flex h-[calc(100vh-134px)] lg:h-[calc(100vh-64px)]">
           {/* Chat List */}
-          <div className="w-full max-w-xs border-r md:max-w-sm">
+          <div className={`w-full max-w-full lg:border-r lg:max-w-sm lg:block ${showMessage ? "hidden" : ""}`}>
             <div className="p-4 border-b">
               <h2 className="mb-4 text-xl font-bold">Messages</h2>
               <div className="relative">
@@ -307,7 +309,7 @@ export default function ChatPage() {
           </div>
 
           {/* Chat Messages Area */}
-          <div className="flex-1 flex flex-col">
+          <div className={`flex-1 lg:flex flex-col  ${showMessage ? "" : "hidden"}`}>
             {messages ? (
               <>
                 {/* Chat Header */}
@@ -327,7 +329,7 @@ export default function ChatPage() {
                       <p className="text-lg font-bold text-green-600">GH₵{Number(messages.productData.productPrice).toFixed(2)}</p>
                     </div>
                     <Link
-                      href={`/product/${messages.productData.productId}`}
+                      href={`/product/${messages?.productData?.productId}`}
                       className="px-3 py-1 text-sm text-blue-600 border border-blue-600 rounded hover:bg-blue-50"
                     >
                       View Product
@@ -357,7 +359,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+                <div className="flex-1 p-4 overflow-y-auto bg-gray-50 h-[calc(100vh-360px)] lg:h-auto">
                   {loadingMessages ? (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
@@ -496,7 +498,7 @@ export default function ChatPage() {
                 </div>
               </>
             ) : (
-              <div className="flex items-center justify-center flex-1 bg-gray-50">
+              <div className="flex items-center justify-center h-full flex-1 bg-gray-50">
                 <div className="text-center">
                   <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                   <h3 className="mb-2 text-lg font-medium text-gray-900">Select a conversation</h3>
@@ -505,6 +507,14 @@ export default function ChatPage() {
               </div>
             )}
           </div>
+        </div>
+        <div className="h-[70px] lg:hidden w-full flex">
+          <button onClick={() => {setShowMessage(false)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? '' : 'bg-slate-100'}`}>
+            <MenuIcon className="text-slate-500"></MenuIcon>
+          </button>
+          <button onClick={() => {setShowMessage(true)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'bg-slate-200' : ''}`}>
+            <MessageCircle className="text-slate-500"></MessageCircle>
+          </button>
         </div>
       </div>
     </main>

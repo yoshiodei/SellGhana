@@ -10,6 +10,7 @@ import { Bell, Heart, LogIn, Menu, MessageCircle, PlusCircle, Search, User, X } 
 // import { subscribeToUserChats, type Chat } from "@/lib/firebase/chats"
 import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
 import { useRouter } from "next/navigation"
+import { logout } from "@/lib/auth/utils/logout"
 
 
 export default function NavBar() {
@@ -73,7 +74,7 @@ export default function NavBar() {
 
   const handleLogout = async () => {
     try {
-      // await logout()
+      await logout(router);
     } catch (error) {
       console.error("Error logging out:", error)
     }

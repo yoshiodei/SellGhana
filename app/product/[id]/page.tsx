@@ -26,6 +26,7 @@ import { generateChatId, sendMessage } from "@/lib/firebase/chats"
 import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
 import { deleteProduct } from "@/lib/firebase/product"
 import { timeStamp } from "console"
+import { getPostedTimeFromFirestore } from "@/utils/getters"
 
 
 export default function ProductPage() {
@@ -57,7 +58,7 @@ export default function ProductPage() {
   
       if (!user) {
         // Redirect to sign in or show sign in modal
-        alert("Please sign in to add items to your wishlist")
+        showToast("Please sign in to add items to your wishlist","error");
         return
       }
   
@@ -208,8 +209,8 @@ export default function ProductPage() {
       )
 
       showToast("Message sent successfully", "success");
+      router.push(`/chat?chatId=${generateChatId(user.uid , product.vendor?.uid, productId)}`)
       setMessage("");
-      // router.push(`/chat?chatId=${generateChatId(user.uid , product.vendor?.uid, productId)}`)
       
     } catch(error){
       console.error("Error sending message:", error);
@@ -247,6 +248,12 @@ export default function ProductPage() {
   }
 
   const handleReport = () => {
+    if (!user) {
+      // Redirect to sign in or show sign in modal
+      showToast("Please sign in to report this item","error");
+      return
+    }
+
     if (product) {
       dispatch(openReportModal(product.id))
     }
@@ -350,7 +357,7 @@ export default function ProductPage() {
                 {product.condition || "Brand New"}
               </span>
               <span className="text-sm text-gray-600">
-                {product.createdAt ? `Posted on ${formatDate(product.createdAt)}` : "Posted date unknown"}
+                {getPostedTimeFromFirestore(product.createdAt)}
               </span>
             </div>
 
