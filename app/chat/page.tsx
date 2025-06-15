@@ -368,54 +368,6 @@ export default function ChatPage() {
                       </div>
                     </div>
                   ) : 
-                  // (
-                  //   <div className="space-y-4">
-                  //     {messages.messages.length === 0 ? (
-                  //       <div className="text-center text-gray-500 py-8">
-                  //         <MessageCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                  //         <p>No messages yet. Start the conversation!</p>
-                  //       </div>
-                  //     ) : (
-                  //       messages.messages.map((message) => {
-                  //         const isMe = message.senderId === user?.uid;
-                  //         return (
-                  //           <div 
-                  //             key={message.timeStamp} 
-                  //             className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-                  //           >
-                  //             <div
-                  //               className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                  //                 isMe
-                  //                   ? "bg-blue-500 text-white rounded-br-none"
-                  //                   : "bg-white text-gray-800 rounded-bl-none shadow-sm"
-                  //               }`}
-                  //             >
-                  //               <p className="break-words">{message.text}</p>
-                  //               <div className="flex items-center justify-between mt-1">
-                  //                 <p className={`text-xs ${isMe ? "text-blue-100" : "text-gray-500"}`}>
-                  //                   {message.timeStamp
-                  //                     ? new Date(message.timeStamp).toLocaleTimeString([], {
-                  //                         hour: "2-digit",
-                  //                         minute: "2-digit",
-                  //                       })
-                  //                     : "Sending..."}
-                  //                 </p>
-                  //                {/* {isMe && (
-                  //                   <span
-                  //                     className={`text-xs ml-2 ${message.read ? "text-blue-100" : "text-blue-200"}`}
-                  //                   >
-                  //                     {message.read ? "✓✓" : "✓"}
-                  //                   </span>
-                  //                 )} */}
-                  //               </div>
-                  //             </div>
-                  //           </div>
-                  //         )
-                  //       })
-                  //     )}
-                  //     <div ref={messagesEndRef} />
-                  //   </div>
-                  // )
                   (
                     <div className="space-y-6">
                       {Object.entries(groupedMessages).map(([dateKey, dayMessages]: any) => {
@@ -509,11 +461,11 @@ export default function ChatPage() {
           </div>
         </div>
         <div className="h-[70px] lg:hidden w-full flex">
-          <button onClick={() => {setShowMessage(false)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? '' : 'bg-slate-100'}`}>
-            <MenuIcon className="text-slate-500"></MenuIcon>
+          <button onClick={() => {setShowMessage(false)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'text-slate-500' : 'bg-purple-300 text-white'}`}>
+            <MenuIcon className=""></MenuIcon>
           </button>
-          <button onClick={() => {setShowMessage(true)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'bg-slate-200' : ''}`}>
-            <MessageCircle className="text-slate-500"></MessageCircle>
+          <button onClick={() => {setShowMessage(true)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'bg-purple-300 text-white' : 'text-slate-500'}`}>
+            <MessageCircle className=""></MessageCircle>
           </button>
         </div>
       </div>
