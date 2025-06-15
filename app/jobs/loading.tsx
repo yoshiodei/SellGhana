@@ -1,7 +1,7 @@
 import NavBar from "@/components/nav-bar"
 import LoadingSpinner from "@/components/loading-spinner"
 
-export default function CategoryLoading() {
+export default function JobLoading() {
   return (
     <main className="min-h-screen bg-gray-50">
       <NavBar />

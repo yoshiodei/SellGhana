@@ -74,13 +74,13 @@ export default function Home() {
               className="bg-cover bg-center p-6 border border-slate-300 bg-gray-100 rounded-lg shadow-sm"
               // style={{ backgroundImage: "url('/pattern_bg.jpg')" }}
             >
-              <h2 className="mb-4 text-2xl font-bold">Trending Products</h2>
-              <p className="mb-6 text-gray-600">Discover what's popular on Sell Ghana right now</p>
+              <h2 className="mb-4 text-2xl font-bold">Jobs & Services</h2>
+              <p className="mb-6 text-gray-600">Find skilled professionals or your next job opportunity today.</p>
               <Link
-                href="/category/trending"
+                href="/jobs"
                 className="inline-block px-6 py-3 text-white bg-primary rounded-md hover:bg-primary-light"
               >
-                View Trending
+                View Jobs & Services
               </Link>
             </div>
 
@@ -105,7 +105,7 @@ export default function Home() {
       {/* Categories */}
       <section className="py-8 bg-gray-50">
         <div className="container px-4 mx-auto">
-          <h2 className="mb-6 text-2xl font-bold">Categories</h2>
+          <h2 className="mb-6 text-2xl font-bold">Top Categories</h2>
           <div className="grid grid-cols-3 gap-4 sm:grid-cols-5 md:grid-cols-9">
             <Link href="/category/electronics" className="flex flex-col items-center">
               <div className="flex items-center justify-center w-16 h-16 mb-2 bg-white border rounded-lg shadow-sm hover:border-primary">
@@ -163,7 +163,7 @@ export default function Home() {
               <span className="text-xs text-center font-semibold text-gray-600">Books</span>
             </Link>
 
-            <Link href="/category/jobs" className="flex flex-col items-center">
+            <Link href="/jobs" className="flex flex-col items-center">
               <div className="flex items-center justify-center w-16 h-16 mb-2 bg-white border rounded-lg shadow-sm hover:border-primary">
                 <Briefcase className="w-8 h-8 text-gray-700" />
               </div>
