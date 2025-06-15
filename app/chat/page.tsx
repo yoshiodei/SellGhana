@@ -176,7 +176,7 @@ export default function ChatPage() {
     }
   }
 
-  const getOtherUserInfo = (chat: ChatMessage | null) => {
+  const getOtherUserInfo = (chat: ChatMessage | ChatListDataType | null) => {
     if (!user) return { name: "Unknown", avatar: "/placeholder.svg?height=40&width=40" }
     if (!chat) return { name: "Unknown", avatar: "/placeholder.svg?height=40&width=40" }
     
@@ -196,7 +196,7 @@ export default function ChatPage() {
   }
 
   const filteredChats = chats.filter((chat) => {
-    const otherUser = getOtherUserInfo(messages)
+    const otherUser = getOtherUserInfo(chat)
     // const otherUser = getOtherUserInfo(chat)
     return (
       otherUser.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -265,7 +265,10 @@ export default function ChatPage() {
                 </div>
               ) : (
                 filteredChats.map((chat) => {
-                  const otherUser = getOtherUserInfo(messages)
+                  const otherUser = getOtherUserInfo(chat)
+                  console.log("other user name", otherUser.name);
+                  console.log("messages data", chat);
+                  
                   const unreadCount = user ? chat.unreadCount[user.uid] || 0 : 0
 
                   return (
