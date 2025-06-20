@@ -238,7 +238,7 @@ export default function ChatPage() {
         </div>
       </nav>
 
-      <div className="flex-1 bg-red-400">
+      <div className="h-[calc(100vh-119px)] bg-red-400">
         
       </div>
       
