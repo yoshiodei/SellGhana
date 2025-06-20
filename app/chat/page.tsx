@@ -455,7 +455,7 @@ export default function ChatPage() {
       </>
     ) : (
       <div className="flex items-center justify-center flex-1 bg-gray-50">
-        <div className="text-center">
+        <div className="text-center p-4">
           <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <h3 className="mb-2 text-lg font-medium text-gray-900">Select a conversation</h3>
           <p className="text-gray-500">Choose a conversation from the list to start messaging</p>
