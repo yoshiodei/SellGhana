@@ -242,7 +242,7 @@ export default function ChatPage() {
       <div className="container px-0 mx-auto">
         <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] lg:h-[calc(100vh-64px)]">
           {/* Chat List */}
-          <div className={`w-full max-w-full  lg:border-r lg:max-w-sm lg:block ${showMessage ? "hidden" : ""}`}>
+          <div className={`w-full max-w-full flex flex-col lg:border-r lg:max-w-sm lg:block ${showMessage ? "hidden" : ""}`}>
             <div className="p-4 border-b">
               <h2 className="mb-4 text-xl font-bold">Messages</h2>
               <div className="relative">
@@ -256,7 +256,7 @@ export default function ChatPage() {
                 <Search className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
               </div>
             </div>
-            <div className="overflow-y-auto h-auto lg:h-[calc(100vh-180px)]">
+            <div className="overflow-y-auto flex-1 lg:h-[calc(100vh-180px)]">
               {loadingChats ? (
                 <div className="p-4 text-center">Loading chats...</div>
               ) : filteredChats.length === 0 ? (
