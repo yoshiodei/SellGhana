@@ -310,6 +310,16 @@ export default function ChatPage() {
               )}
 
             </div>
+
+            <div className="h-[55px] lg:hidden w-full flex border-t border-slate-200">
+                <button onClick={() => {setShowMessage(false)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'text-slate-500' : 'bg-purple-300 text-white'}`}>
+                  <MenuIcon className=""></MenuIcon>
+                </button>
+                <button onClick={() => {setShowMessage(true)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'bg-purple-300 text-white' : 'text-slate-500'}`}>
+                  <MessageCircle className=""></MessageCircle>
+                </button>
+              </div>
+              
           </div>
 
           {/* Chat Messages Area */}
