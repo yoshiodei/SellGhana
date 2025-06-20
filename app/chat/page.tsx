@@ -288,11 +288,11 @@ export default function ChatPage() {
                     className="object-cover"
                   />
                 </div>
-                {unreadCount > 0 && (
+                {/* {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-xs text-white bg-red-500 rounded-full">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
-                )}
+                )} */}
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-gray-900 truncate">{otherUser.name}</h3>
@@ -454,7 +454,7 @@ export default function ChatPage() {
         </div>
       </>
     ) : (
-      <div className="flex items-center justify-center h-full flex-1 bg-gray-50">
+      <div className="flex items-center justify-center flex-1 bg-gray-50">
         <div className="text-center">
           <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <h3 className="mb-2 text-lg font-medium text-gray-900">Select a conversation</h3>
