@@ -243,7 +243,7 @@ export default function ChatPage() {
         <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] lg:h-[calc(100vh-64px)]">
           {/* Chat List */}
           <div className={`w-full max-w-full flex flex-1 flex-col lg:border-r lg:max-w-sm lg:block ${showMessage ? "hidden" : ""}`}>
-            <div className="p-4 border-b">
+            <div className="p-4 border-b h-[80px] lg:auto">
               <h2 className="mb-4 text-xl font-bold">Messages</h2>
               <div className="relative">
                 <input
@@ -256,7 +256,7 @@ export default function ChatPage() {
                 <Search className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
               </div>
             </div>
-            <div className="overflow-y-auto flex-1 lg:h-[calc(100vh-180px)]">
+            <div className="overflow-y-auto h-[calc(100vh-199px)] lg:h-[calc(100vh-180px)]">
               {loadingChats ? (
                 <div className="p-4 text-center">Loading chats...</div>
               ) : filteredChats.length === 0 ? (
@@ -311,15 +311,15 @@ export default function ChatPage() {
 
             </div>
 
-            <div className="h-[55px] lg:hidden w-full flex border-t border-slate-200">
+            {/* <div className="h-[55px] lg:hidden w-full flex border-t border-slate-200">
                 <button onClick={() => {setShowMessage(false)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'text-slate-500' : 'bg-purple-300 text-white'}`}>
                   <MenuIcon className=""></MenuIcon>
                 </button>
                 <button onClick={() => {setShowMessage(true)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'bg-purple-300 text-white' : 'text-slate-500'}`}>
                   <MessageCircle className=""></MessageCircle>
                 </button>
-              </div>
-              
+              </div> */}
+
           </div>
 
           {/* Chat Messages Area */}
