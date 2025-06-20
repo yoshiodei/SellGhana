@@ -228,7 +228,7 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="h-screen lg:min-h-screen w-screen lg:w-auto">
+    <main className="h-[100vh] lg:min-h-screen w-screen lg:w-auto">
       {/* Navbar */}
       <nav className="sticky top-0 z-10 bg-white border-b shadow-sm">
         <div className="container flex items-center justify-between w-full h-16 px-4 mx-auto">
@@ -256,7 +256,7 @@ export default function ChatPage() {
                 <Search className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
               </div>
             </div>
-            <div className="overflow-y-auto h-[calc(100vh-250px)]">
+            <div className="overflow-y-auto h-auto lg:h-[calc(100vh-180px)]">
               {loadingChats ? (
                 <div className="p-4 text-center">Loading chats...</div>
               ) : filteredChats.length === 0 ? (
@@ -310,16 +310,6 @@ export default function ChatPage() {
               )}
 
             </div>
-
-            <div className="h-[70px] lg:hidden w-full flex">
-                <button onClick={() => {setShowMessage(false)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'text-slate-500' : 'bg-purple-300 text-white'}`}>
-                  <MenuIcon className=""></MenuIcon>
-                </button>
-                <button onClick={() => {setShowMessage(true)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'bg-purple-300 text-white' : 'text-slate-500'}`}>
-                  <MessageCircle className=""></MessageCircle>
-                </button>
-              </div>
-
           </div>
 
           {/* Chat Messages Area */}
@@ -475,14 +465,14 @@ export default function ChatPage() {
 
           </div>
 
-          {/* <div className="h-[70px] lg:hidden w-full flex">
-          <button onClick={() => {setShowMessage(false)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'text-slate-500' : 'bg-purple-300 text-white'}`}>
-            <MenuIcon className=""></MenuIcon>
-          </button>
-          <button onClick={() => {setShowMessage(true)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'bg-purple-300 text-white' : 'text-slate-500'}`}>
-            <MessageCircle className=""></MessageCircle>
-          </button>
-        </div> */}
+          <div className="h-[55px] lg:hidden w-full flex border-t border-slate-200">
+                <button onClick={() => {setShowMessage(false)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'text-slate-500' : 'bg-purple-300 text-white'}`}>
+                  <MenuIcon className=""></MenuIcon>
+                </button>
+                <button onClick={() => {setShowMessage(true)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'bg-purple-300 text-white' : 'text-slate-500'}`}>
+                  <MessageCircle className=""></MessageCircle>
+                </button>
+              </div>
 
         </div>
       </div>
