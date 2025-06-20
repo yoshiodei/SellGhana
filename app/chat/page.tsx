@@ -256,7 +256,7 @@ export default function ChatPage() {
                 <Search className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
               </div>
             </div>
-            <div className="overflow-y-auto h-[calc(100vh-180px)]">
+            <div className="overflow-y-auto h-[calc(100vh-110px)]">
               {loadingChats ? (
                 <div className="p-4 text-center">Loading chats...</div>
               ) : filteredChats.length === 0 ? (
