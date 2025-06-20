@@ -228,10 +228,10 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="h-screen lg:min-h-screen w-screen lg:w-auto">
       {/* Navbar */}
       <nav className="sticky top-0 z-10 bg-white border-b shadow-sm">
-        <div className="container flex items-center justify-between h-16 px-4 mx-auto">
+        <div className="container flex items-center justify-between w-full h-16 px-4 mx-auto">
           <Link href="/" className="text-xl font-bold">
             Sell Ghana
           </Link>
