@@ -242,7 +242,7 @@ export default function ChatPage() {
       <div className="container px-0 mx-auto">
         <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] lg:h-[calc(100vh-64px)]">
           {/* Chat List */}
-          <div className={`w-full max-w-full lg:border-r lg:max-w-sm lg:block ${showMessage ? "hidden" : ""}`}>
+          <div className={`w-full max-w-full  lg:border-r lg:max-w-sm lg:block ${showMessage ? "hidden" : ""}`}>
             <div className="p-4 border-b">
               <h2 className="mb-4 text-xl font-bold">Messages</h2>
               <div className="relative">
@@ -462,25 +462,16 @@ export default function ChatPage() {
               </div>
             )}
 
-           <div className="h-[70px] lg:hidden w-full flex">
-            <button onClick={() => {setShowMessage(false)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'text-slate-500' : 'bg-purple-300 text-white'}`}>
-              <MenuIcon className=""></MenuIcon>
-            </button>
-            <button onClick={() => {setShowMessage(true)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'bg-purple-300 text-white' : 'text-slate-500'}`}>
-              <MessageCircle className=""></MessageCircle>
-            </button>
           </div>
 
-          </div>
-
-          {/* <div className="h-[70px] lg:hidden w-full flex">
+          <div className="h-[70px] lg:hidden w-full flex">
           <button onClick={() => {setShowMessage(false)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'text-slate-500' : 'bg-purple-300 text-white'}`}>
             <MenuIcon className=""></MenuIcon>
           </button>
           <button onClick={() => {setShowMessage(true)}} className={`flex-1 h-full flex items-center justify-center ${showMessage ? 'bg-purple-300 text-white' : 'text-slate-500'}`}>
             <MessageCircle className=""></MessageCircle>
           </button>
-        </div> */}
+        </div>
 
         </div>
       </div>
