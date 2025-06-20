@@ -242,7 +242,7 @@ export default function ChatPage() {
       <div className="container px-0 mx-auto">
         <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] lg:h-[calc(100vh-64px)]">
           {/* Chat List */}
-          <div className={`w-full max-w-full flex flex-col lg:border-r lg:max-w-sm lg:block ${showMessage ? "hidden" : ""}`}>
+          <div className={`w-full max-w-full flex flex-1 flex-col lg:border-r lg:max-w-sm lg:block ${showMessage ? "hidden" : ""}`}>
             <div className="p-4 border-b">
               <h2 className="mb-4 text-xl font-bold">Messages</h2>
               <div className="relative">
