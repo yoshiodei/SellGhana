@@ -361,7 +361,32 @@ export default function ProductPage() {
               </span>
             </div>
 
-            <p className="text-sm text-gray-600">{`Location: ${product?.location?.region}, ${product?.location?.suburb}`}</p>
+            <p className="text-sm text-gray-600">{ product?.location?.region ? `Location: ${product?.location?.region}, ${product?.location?.suburb}` : `Location: ${product.location}`}</p>
+            
+            {/* Car details */}
+            {(product?.type || product?.vin || product?.mileage) && (<div>
+              <p className="mb-2 text-slate-400 font-bold">Vehicle Details</p>
+              <div className="flex gap-y-1 flex-col">
+                {product?.type && (<p className="text-sm text-gray-600">{`Car Type: ${product?.type}`}</p>)}
+                {product?.mileage && (<p className="text-sm text-gray-600">{`Mileage: ${product?.mileage}`}</p>)}
+                {product?.vin && (<p className="text-sm text-gray-600">{`VIN: ${product?.vin}`}</p>)}
+              </div>
+            </div>)}
+
+            {/* Book details */}
+            {(product?.author || product?.datePublished || product?.format || product?.genre || product?.isbn || product?.language || product?.pages || product?.publisher) && (<div>
+              <p className="mb-2 text-slate-400 font-bold">Book Details</p>
+              <div className="flex gap-y-1 flex-col">
+                {product?.author && (<p className="text-sm text-gray-600">{`Author: ${product?.author}`}</p>)}
+                {product?.publisher && (<p className="text-sm text-gray-600">{`Publisher: ${product?.publisher}`}</p>)}
+                {product?.datePublished && (<p className="text-sm text-gray-600">{`Date Published: ${product?.datePublished}`}</p>)}
+                {product?.genre && (<p className="text-sm text-gray-600">{`Genre: ${product?.genre}`}</p>)}
+                {product?.format && (<p className="text-sm text-gray-600">{`Format: ${product?.format}`}</p>)}
+                {product?.language && (<p className="text-sm text-gray-600">{`Language: ${product?.language}`}</p>)}
+                {product?.isbn && (<p className="text-sm text-gray-600">{`ISBN: ${product?.isbn}`}</p>)}
+                {product?.pages && (<p className="text-sm text-gray-600">{`Pages: ${product?.pages} pages`}</p>)}
+              </div>
+            </div>)}
 
             <div className="pt-4 border-t">
               <h3 className="mb-2 text-lg font-medium">Description</h3>

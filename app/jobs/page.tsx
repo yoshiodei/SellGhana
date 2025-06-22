@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ChevronDown, Filter, MessageCircle, PlusCircle, Search, ShoppingBag, User, X } from "lucide-react"
+import { ChevronDown, Filter, MessageCircle, Banknote, Search, ShoppingBag, User, X } from "lucide-react"
 import ProductCard from "@/components/product-card"
 import { products } from "@/lib/products"
 import { ghanaRegions } from "@/lib/ghana-regions"
@@ -98,7 +98,7 @@ export default function CategoryPage() {
         style={{ backgroundImage: "url('/pattern_bg.jpg')" }}
       >
         <div className="container flex flex-col items-center justify-center h-full px-4 mx-auto text-center">
-          <h1 className="mb-4 text-4xl font-bold md:text-5xl">Jobs & Services</h1>
+          <h1 className="mb-4 text-4xl font-bold md:text-5xl">Jobs Listing</h1>
           <p className="text-lg text-gray-600">Discover what people are working on or hiring for right now.</p>
         </div>
       </section>
@@ -273,15 +273,35 @@ export default function CategoryPage() {
         <section className="py-8 bg-gray-50 flex-1">
         <div className="container px-4 mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">{filteredProducts.length} Products</h2>
+            <h2 className="text-2xl font-bold">{filteredProducts.length} Jobs/Services</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {
-            filteredJobs.length > 0 ? (
-            filteredJobs.map((product) => (
-              <div>Hello</div> 
+            filteredJobs.length === 0 ? (
+            [1,2,3].map((product) => (
+              <button className="hover:bg-slate-100 border border-slate-400 rounded-lg p-2 flex flex-col w-full gap-y-2">
+                <div className="w-full">
+                  <div className="flex flex justify-between items-center w-full">
+                    <div className="h-[40px] flex items-center">
+                      <div className="me-[7px] w-[40px] h-[40px] rounded-full bg-slate-300 border border-slate-500"></div>
+                      <p className="text-[0.85em] truncate">Some Company</p>
+                    </div>
+                    <p className="text-[0.72em] text-slate-500">Posted 6 days ago</p>
+                  </div>
+                </div>
+                <h5 className="text-[1em] text-left font-bold text-slate-700">Some Job/Service Title</h5>
+                <div className="flex flex-wrap gap-2">
+                  {["Part-Time","Full-Time","Contract","On-Site"].map((type) => (
+                    <div className="font-semibold p-1 bg-slate-300 text-slate-500 rounded text-[0.75em]">{type}</div>
+                  ))}
+                </div>
+                <div className="flex gap-2 items-center text-slate-600">
+                  <Banknote />
+                  <p className="text-[0.95em] font-semibold">Ghc 700 - Ghc 1200</p>
+                </div>
+              </button>
             ))) :
-            (<p>No products found.</p>)
+            (<p>No Jobs/Services found.</p>)
             }
           </div>
         </div>
@@ -314,18 +334,6 @@ export default function CategoryPage() {
                   </Link>
                 </li>
               </ul>
-            </div>
-            <div>
-              <h3 className="mb-4 text-lg font-bold">Newsletter</h3>
-              <p className="mb-2 text-gray-400">Subscribe to get updates on new products.</p>
-              <div className="flex">
-                <input
-                  type="email"
-                  placeholder="Your email"
-                  className="w-full px-3 py-2 text-black rounded-l-md focus:outline-none"
-                />
-                <button className="px-4 py-2 bg-white text-black rounded-r-md hover:bg-gray-200">Subscribe</button>
-              </div>
             </div>
           </div>
           <div className="pt-8 mt-8 text-center text-gray-400 border-t border-gray-800">

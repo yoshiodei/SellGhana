@@ -10,6 +10,13 @@ import { ArrowLeft, Upload, X, Check, AlertCircle } from "lucide-react"
 import NavBar from "@/components/nav-bar"
 import ProtectedRoute from "@/lib/auth/ProtectedRoutes"
 import { ghanaRegions } from "@/lib/ghana-regions"
+import { db, storage } from "@/lib/firebase/firebase"
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
+import { showToast } from "@/utils/showToast"
+import { getFirstThreeLetters } from "@/utils/getters"
+import { nanoid } from "nanoid"
+import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
 
 // Book genres
 const BOOK_GENRES = [
@@ -103,10 +110,12 @@ interface BookForm {
 }
 
 export default function BookForm() {
+  const { user } = useAuthUser();
+
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [formData, setFormData] = useState<BookForm>({
+  const initialFormState = {
     name: "",
     authors: "",
     publisher: "",
@@ -120,11 +129,14 @@ export default function BookForm() {
     price: "",
     region: "",
     suburb: "",
-  })
+  }
+
+  const [formData, setFormData] = useState<BookForm>(initialFormState);
 
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false);
   const [submittedData, setSubmittedData] = useState<any>(null)
 
   // Get suburbs for the selected region
@@ -278,13 +290,37 @@ export default function BookForm() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading(true);
 
-    if (validateForm()) {
+    try{
+      if (validateForm()) {
+      const  three = getFirstThreeLetters("books");
+      const productId = `sg-${three}-${nanoid()}`;
+
+      const uploadedImages = await Promise.all(
+        images.map(async (image) => {
+          const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
+          await uploadBytes(imageRef, image.file);
+          const downloadURL = await getDownloadURL(imageRef);
+          return downloadURL;
+        })
+      );
+      
       // Prepare the data object
       const bookData = {
+        id: productId,
         name: formData.name,
+        price: Number(formData.price),
+        location: {
+          region: formData.region,
+          suburb: formData.suburb,
+        },
+        description: formData.description,
+        images: uploadedImages,
+        createdAt: serverTimestamp(),
+
         authors: formData.authors,
         publisher: formData.publisher,
         datePublished: formData.datePublished,
@@ -293,27 +329,41 @@ export default function BookForm() {
         language: formData.language,
         pages: Number(formData.pages),
         format: formData.format,
-        description: formData.description,
-        price: Number(formData.price),
-        location: {
-          region: formData.region,
-          suburb: formData.suburb,
-        },
-        images: images.map((img) => ({
-          name: img.file.name,
-          size: img.file.size,
-          type: img.file.type,
-        })),
         category: "books",
-        createdAt: new Date().toISOString(),
+        viewCount: [],
+        promotion: {
+          isPromoted: false,
+          datePromoted:"",
+          dateOfExpiry:"",
+          promoType: ""
+        },
+        vendor:{
+          uid: user?.uid || "",   
+          image: user?.photoURL || "",
+          name: user?.displayName || "", 
+        },
       }
 
       // In a real app, you would submit this data to your backend
       console.log("Form submitted:", bookData)
 
+      await setDoc(doc(db, "productListing", productId), bookData);
+      
       // Show the submitted data
       setSubmittedData(bookData)
       setIsSubmitted(true)
+
+      showToast("Post added successfully","success");
+      setFormData(initialFormState);
+      router.push("/");
+
+      }
+
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      showToast("Error adding post","error")
+      console.error('Error submitting listing:', error);
     }
   }
 
@@ -339,33 +389,6 @@ export default function BookForm() {
             <h1 className="mb-2 text-2xl font-bold">Create New Book Listing</h1>
             <p className="mb-6 text-gray-600">Fill in the details to list your book for sale</p>
 
-            {isSubmitted ? (
-              <div className="p-6 bg-white rounded-lg shadow">
-                <div className="flex items-center mb-4 text-green-600">
-                  <Check className="w-6 h-6 mr-2" />
-                  <h2 className="text-xl font-semibold">Book Listing Created Successfully!</h2>
-                </div>
-
-                <div className="p-4 mb-6 bg-gray-50 rounded-lg">
-                  <h3 className="mb-2 font-medium">Book Details:</h3>
-                  <pre className="p-4 overflow-auto text-sm bg-gray-100 rounded">
-                    {JSON.stringify(submittedData, null, 2)}
-                  </pre>
-                </div>
-
-                <div className="flex justify-between">
-                  <Link
-                    href="/categories"
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100"
-                  >
-                    Create Another Listing
-                  </Link>
-                  <Link href="/" className="px-4 py-2 text-white bg-primary rounded-md hover:bg-primary-light">
-                    Go to Home
-                  </Link>
-                </div>
-              </div>
-            ) : (
               <form onSubmit={handleSubmit} className="p-6 bg-white rounded-lg shadow">
                 {/* Book Title */}
                 <div className="mb-4">
@@ -715,11 +738,10 @@ export default function BookForm() {
                 </div>
 
                 {/* Submit Button */}
-                <button type="submit" className="w-full px-6 py-3 text-white bg-primary rounded-md hover:bg-primary-light">
-                  Post Book Listing
+                <button type="submit" disabled={loading} className="w-full px-6 py-3 text-white bg-primary rounded-md hover:bg-primary-light">
+                  {loading ? '...loading' : 'Post Book Listing'}
                 </button>
               </form>
-            )}
           </div>
         </div>
       </main>

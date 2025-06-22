@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, Upload, X, Check, AlertCircle, Calendar } from "lucide-react"
+import { ArrowLeft, Upload, X, Check, AlertCircle, Calendar, ExternalLink } from "lucide-react"
 import NavBar from "@/components/nav-bar"
 import ProtectedRoute from "@/lib/auth/ProtectedRoutes"
 import { ghanaRegions } from "@/lib/ghana-regions"
@@ -26,6 +26,8 @@ interface JobForm {
   applicationDeadline: string
   experience: string
   employmentType: string
+  otherCategory: string
+  externalLink: string
 }
 
 // Job categories
@@ -155,6 +157,7 @@ export default function NewJobPostPage() {
     title: "",
     company: "",
     category: "",
+    otherCategory: "",
     isRemote: false,
     region: "",
     suburb: "",
@@ -166,6 +169,7 @@ export default function NewJobPostPage() {
     applicationDeadline: "",
     experience: "",
     employmentType: "",
+    externalLink: "",
   })
 
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
@@ -308,7 +312,7 @@ export default function NewJobPostPage() {
       newErrors.company = "Company name is required"
     }
 
-    if (!formData.category) {
+    if (!formData.category || (formData.category === "Other" && !formData.otherCategory)) {
       newErrors.category = "Job category is required"
     }
 
@@ -324,6 +328,12 @@ export default function NewJobPostPage() {
 
     if (!formData.description.trim()) {
       newErrors.description = "Job description is required"
+    }
+
+    const regex = /^https?:\/\/[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+([\/\w\-._~:?#[\]@!$&'()*+,;=]*)?$/;
+
+    if (formData.externalLink && !regex.test(formData.externalLink)) {
+      newErrors.externalLink = "URL entered is invalid"
     }
 
     // Salary validation
@@ -387,6 +397,10 @@ export default function NewJobPostPage() {
       newErrors.skills = "At least one skill is required"
     }
 
+    if (selectedSkills.length === 0) {
+      newErrors.skills = "At least one skill is required"
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -408,10 +422,10 @@ export default function NewJobPostPage() {
           formData.salaryMin && formData.salaryMax
             ? `GH₵${formData.salaryMin} - GH₵${formData.salaryMax}`
             : formData.salaryMin
-              ? `From GH₵${formData.salaryMin}`
+              ? `GH₵${formData.salaryMin}`
               : formData.salaryMax
                 ? `Up to GH₵${formData.salaryMax}`
-                : "Not specified",
+                : "Salary Not specified",
         salaryDetails: {
           min: formData.salaryMin ? Number(formData.salaryMin) : null,
           max: formData.salaryMax ? Number(formData.salaryMax) : null,
@@ -432,14 +446,15 @@ export default function NewJobPostPage() {
             }
           : null,
         createdAt: new Date().toISOString(),
+        externalLink: formData.externalLink,
       }
 
       // In a real app, you would submit this data to your backend
       console.log("Job posting submitted:", jobData)
 
       // Show the submitted data
-      setSubmittedData(jobData)
-      setIsSubmitted(true)
+      // setSubmittedData(jobData)
+      // setIsSubmitted(true)
     }
   }
 
@@ -517,7 +532,7 @@ export default function NewJobPostPage() {
                 {/* Company */}
                 <div className="mb-4">
                   <label htmlFor="company" className="block mb-2 text-sm font-medium text-gray-700">
-                    Company <span className="text-red-500">*</span>
+                    Company Name<span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -556,6 +571,26 @@ export default function NewJobPostPage() {
                   </select>
                   {errors.category && <p className="mt-1 text-sm text-red-500">{errors.category}</p>}
                 </div>
+
+                {formData.category === "Other" && (
+                  <div className="mb-4">
+                    <label htmlFor="otherCategory" className="block mb-2 text-sm font-medium text-gray-700">
+                      Specify Category<span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="otherCategory"
+                      name="otherCategory"
+                      value={formData.otherCategory}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
+                        errors.otherCategory ? "border-red-500" : "border-gray-300"
+                      }`}
+                      placeholder="Enter brand name"
+                    />
+                    {errors.category && <p className="mt-1 text-sm text-red-500">{errors.category}</p>}
+                  </div>
+                )}
 
                 {/* Location */}
                 <div className="mb-4">
@@ -755,7 +790,7 @@ export default function NewJobPostPage() {
                   {/* Email */}
                   <div>
                     <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-700">
-                      Contact Email <span className="text-red-500">*</span>
+                      Email <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
@@ -774,7 +809,7 @@ export default function NewJobPostPage() {
                   {/* Phone */}
                   <div>
                     <label htmlFor="phone" className="block mb-2 text-sm font-medium text-gray-700">
-                      Contact Phone (Optional)
+                      Phone
                     </label>
                     <input
                       type="tel"
@@ -863,6 +898,25 @@ export default function NewJobPostPage() {
                   {errors.employmentType && <p className="mt-1 text-sm text-red-500">{errors.employmentType}</p>}
                 </div>
 
+                {/* External Link */}
+                <div className="mb-4">
+                  <label htmlFor="externalLink" className="block mb-2 text-sm font-medium text-gray-700">
+                    Job Link
+                  </label>
+                  <input
+                    type="text"
+                    id="externalLink"
+                    name="externalLink"
+                    value={formData.externalLink}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
+                      errors.externalLink ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Enter brand name"
+                  />
+                  {errors.externalLink && <p className="mt-1 text-sm text-red-500">{errors.externalLink}</p>}
+                </div>
+
                 {/* Company Logo Upload */}
                 <div className="mb-4">
                   <label className="block mb-2 text-sm font-medium text-gray-700">
@@ -924,7 +978,7 @@ export default function NewJobPostPage() {
                 </div>
 
                 {/* Submit Button */}
-                <button type="submit" className="w-full px-6 py-3 text-white bg-black rounded-md hover:bg-gray-800">
+                <button type="submit" className="w-full px-6 py-3 text-white bg-primary rounded-md hover:bg-primary-light">
                   Post Job
                 </button>
               </form>

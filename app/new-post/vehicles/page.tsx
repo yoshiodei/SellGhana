@@ -7,8 +7,16 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowLeft, Upload, X, Check, AlertCircle } from "lucide-react"
 import NavBar from "@/components/nav-bar"
+import { db, storage } from "@/lib/firebase/firebase"
 import ProtectedRoute from "@/lib/auth/ProtectedRoutes"
 import { ghanaRegions } from "@/lib/ghana-regions"
+import { getFirstThreeLetters } from "@/utils/getters"
+import { nanoid } from "nanoid"
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
+import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
+import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { showToast } from "@/utils/showToast"
+import { useRouter } from "next/navigation"
 
 // Form data type
 interface VehicleForm {
@@ -76,9 +84,16 @@ const VEHICLE_CONDITIONS = ["Brand New", "Excellent", "Good", "Fair", "Poor", "S
 const MAX_FILE_SIZE = 1024 * 1024
 
 export default function VehicleFormPage() {
+  const { user } = useAuthUser();
+  const router = useRouter();
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [formData, setFormData] = useState<VehicleForm>({
+  // const initialFormState = 
+
+  const [loading, setLoading] = useState(false);
+
+  const initialFormData = {
     type: "",
     make: "",
     model: "",
@@ -90,7 +105,9 @@ export default function VehicleFormPage() {
     suburb: "",
     details: "",
     condition: "",
-  })
+  }
+
+  const [formData, setFormData] = useState<VehicleForm>(initialFormData)
 
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -251,40 +268,81 @@ export default function VehicleFormPage() {
   }
 
   // Form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading(true);
 
-    if (validateForm()) {
+    try{
+      if (validateForm()) {
       // Prepare the data object
+
+      const three = getFirstThreeLetters("vehicles");
+      const productId = `sg-${three}-${nanoid()}`;
+
+      const uploadedImages = await Promise.all(
+        images.map(async (image) => {
+        const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
+        await uploadBytes(imageRef, image.file);
+        const downloadURL = await getDownloadURL(imageRef);
+          return downloadURL;
+        })
+      );
+      
+
       const vehicleData = {
+        id: productId,
         type: formData.type,
         make: formData.make,
         model: formData.model,
+
+        name: `${formData.year} ${formData.make} ${formData.model}`,
         price: Number(formData.price),
+        condition: formData.condition,
+        location: `${formData.suburb}, ${formData.region}`,
+        description: formData.details,
+        images: uploadedImages,
+        category: "vehicles",
+
         vin: formData.vin,
         mileage: Number(formData.mileage),
         year: formData.year,
-        condition: formData.condition,
-        location: `${formData.suburb}, ${formData.region}`,
         locationDetails: {
           region: formData.region,
           suburb: formData.suburb,
         },
-        details: formData.details,
-        images: images.map((img) => ({
-          name: img.file.name,
-          size: img.file.size,
-          type: img.file.type,
-        })),
-        createdAt: new Date().toISOString(),
+        promotion: {
+          isPromoted: false,
+          datePromoted:"",
+          dateOfExpiry:"",
+          promoType: ""
+          },
+        viewCount: [],
+        vendor:{
+          uid: user?.uid || "",   
+          image: user?.photoURL || "",
+          name: user?.displayName || "", 
+        },
+        createdAt: serverTimestamp(),
       }
 
       // In a real app, you would submit this data to your backend
       console.log("Vehicle listing submitted:", vehicleData)
 
-      // Show the submitted data
+      await setDoc(doc(db, "productListing", productId), vehicleData);
+
+      showToast("Post added successfully","success");
+    
       setSubmittedData(vehicleData)
       setIsSubmitted(true)
+      setFormData(initialFormData)
+      router.push("/");
+      }
+
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      showToast("Error adding post", "error");
+      console.error('Error submitting listing:', error);
     }
   }
 
@@ -312,33 +370,6 @@ export default function VehicleFormPage() {
             <h1 className="mb-2 text-2xl font-bold">List Your Vehicle</h1>
             <p className="mb-6 text-gray-600">Fill in the details to create your vehicle listing</p>
 
-            {isSubmitted ? (
-              <div className="p-6 bg-white rounded-lg shadow">
-                <div className="flex items-center mb-4 text-green-600">
-                  <Check className="w-6 h-6 mr-2" />
-                  <h2 className="text-xl font-semibold">Vehicle Listed Successfully!</h2>
-                </div>
-
-                <div className="p-4 mb-6 bg-gray-50 rounded-lg">
-                  <h3 className="mb-2 font-medium">Vehicle Details:</h3>
-                  <pre className="p-4 overflow-auto text-sm bg-gray-100 rounded">
-                    {JSON.stringify(submittedData, null, 2)}
-                  </pre>
-                </div>
-
-                <div className="flex justify-between">
-                  <Link
-                    href="/new-post/vehicle-form"
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100"
-                  >
-                    List Another Vehicle
-                  </Link>
-                  <Link href="/" className="px-4 py-2 text-white bg-black rounded-md hover:bg-gray-800">
-                    Go to Home
-                  </Link>
-                </div>
-              </div>
-            ) : (
               <form onSubmit={handleSubmit} className="p-6 bg-white rounded-lg shadow">
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {/* Vehicle Type */}
@@ -658,12 +689,11 @@ export default function VehicleFormPage() {
 
                 {/* Submit Button */}
                 <div className="mt-6">
-                  <button type="submit" className="w-full px-6 py-3 text-white bg-black rounded-md hover:bg-gray-800">
-                    List Vehicle
+                  <button type="submit" disabled={loading} className="w-full px-6 py-3 text-white bg-primary rounded-md hover:bg-primary-light">
+                    {loading ? "...loading" : "List Vehicle"}
                   </button>
                 </div>
               </form>
-            )}
           </div>
         </div>
       </main>

@@ -17,6 +17,17 @@ export interface FirebaseProduct {
   vendor?: {image: string, name: string, uid: string}
   tag?: string
   viewCount?: number
+  vin?: string
+  mileage?: string
+  type?: string
+  author?: string
+  datePublished?: string
+  format?: string
+  genre?: string
+  isbn?: string
+  language?: string
+  pages?: string | number
+  publisher?: string
 }
 
 // Cache for products
