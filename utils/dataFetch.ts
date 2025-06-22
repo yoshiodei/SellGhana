@@ -14,6 +14,7 @@ export const fetchProductsByCategory = async (category: string) => {
       'home',
       'property',
       'fashion',
+      'cosmetics'
     ];
 
     const now = new Date()

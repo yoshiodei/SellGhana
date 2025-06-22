@@ -18,6 +18,8 @@ import {
   Gem,
 } from "lucide-react"
 
+import SoapDispenser from '@/components/icons/soap-dispenser-droplet.svg';
+
 export interface Category {
   id: string
   name: string
@@ -57,6 +59,12 @@ export const categories: Category[] = [
     name: "Fashion",
     description: "Clothing, shoes, bags, and accessories",
     icon: Shirt,
+  },
+  {
+    id: "cosmetics",
+    name: "Cosmetics",
+    description: "Soap, perfume, lotion, and makeup",
+    icon: SoapDispenser,
   },
   {
     id: "jobs",

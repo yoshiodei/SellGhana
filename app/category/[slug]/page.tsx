@@ -24,6 +24,7 @@ const validCategories = [
   'home',
   'property',
   'fashion',
+  'cosmetics'
 ];
 
 export default function CategoryPage() {
@@ -286,6 +287,7 @@ export default function CategoryPage() {
               'Home',
               'Property',
               'Fashion',
+              'Cosmetics'
             ].map((category) => (
               <Link
                 key={category}

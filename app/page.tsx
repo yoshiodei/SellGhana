@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react"
 import Link from "next/link"
-import { ArrowUp } from "lucide-react"
+import { ArrowUp, Scale } from "lucide-react"
 import ProductCard from "@/components/product-card"
 import NavBar from "@/components/nav-bar"
-import { Smartphone, Car, Shirt, HomeIcon, Sofa, Dumbbell, Gamepad2, BookOpen, Briefcase } from "lucide-react"
+import { Smartphone, Car, Shirt, HomeIcon, Sofa, Dumbbell, Gamepad2, BookOpen, Briefcase} from "lucide-react"
+import SoapDispenser from '@/components/icons/soap-dispenser-droplet.svg';
 import { useProducts } from "@/hooks/use-products"
 import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
 
@@ -74,13 +75,13 @@ export default function Home() {
               className="bg-cover bg-center p-6 border border-slate-300 bg-gray-100 rounded-lg shadow-sm"
               // style={{ backgroundImage: "url('/pattern_bg.jpg')" }}
             >
-              <h2 className="mb-4 text-2xl font-bold">Jobs & Services</h2>
-              <p className="mb-6 text-gray-600">Find skilled professionals or your next job opportunity today.</p>
+              <h2 className="mb-4 text-2xl font-bold">Find Jobs</h2>
+              <p className="mb-6 text-gray-600">Find your next job opportunity right here today.</p>
               <Link
                 href="/jobs"
                 className="inline-block px-6 py-3 text-white bg-primary rounded-md hover:bg-primary-light"
               >
-                View Jobs & Services
+                View Jobs
               </Link>
             </div>
 
@@ -105,8 +106,8 @@ export default function Home() {
       {/* Categories */}
       <section className="py-8 bg-gray-50">
         <div className="container px-4 mx-auto">
-          <h2 className="mb-6 text-2xl font-bold">Top Categories</h2>
-          <div className="grid grid-cols-3 gap-4 sm:grid-cols-5 md:grid-cols-9">
+          <h2 className="mb-6 text-2xl font-bold">Categories</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-5 md:grid-cols-10">
             <Link href="/category/electronics" className="flex flex-col items-center">
               <div className="flex items-center justify-center w-16 h-16 mb-2 bg-white border rounded-lg shadow-sm hover:border-primary">
                 <Smartphone className="w-8 h-8 text-gray-700" />
@@ -126,6 +127,13 @@ export default function Home() {
                 <Shirt className="w-8 h-8 text-gray-700" />
               </div>
               <span className="text-xs text-center font-semibold text-gray-600">Fashion</span>
+            </Link>
+
+            <Link href="/category/cosmetics" className="flex flex-col items-center">
+              <div className="flex items-center justify-center w-16 h-16 mb-2 bg-white border rounded-lg shadow-sm hover:border-primary">
+                <SoapDispenser className="text-gray-700 scale-125" />
+              </div>
+              <span className="text-xs text-center font-semibold text-gray-600">Cosmetics</span>
             </Link>
 
             <Link href="/category/furniture" className="flex flex-col items-center">
@@ -169,6 +177,7 @@ export default function Home() {
               </div>
               <span className="text-xs text-center font-semibold text-gray-600">Jobs</span>
             </Link>
+
           </div>
         </div>
       </section>
@@ -228,18 +237,6 @@ export default function Home() {
                   </Link>
                 </li>
               </ul>
-            </div>
-            <div>
-              <h3 className="mb-4 text-lg font-bold">Newsletter</h3>
-              <p className="mb-2 text-gray-400">Subscribe to get updates on new products.</p>
-              <div className="flex">
-                <input
-                  type="email"
-                  placeholder="Your email"
-                  className="w-full px-3 py-2 text-black rounded-l-md focus:outline-none"
-                />
-                <button className="px-4 py-2 bg-white text-black rounded-r-md hover:bg-gray-200">Subscribe</button>
-              </div>
             </div>
           </div>
           <div className="py-5 mt-8 text-center text-gray-400 border-t border-gray-700">

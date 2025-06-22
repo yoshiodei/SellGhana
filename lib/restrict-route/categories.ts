@@ -10,6 +10,7 @@ export const validCategories = [
   'home',
   'property',
   'fashion',
+  'cosmetics'
 ];
 
 export const getStaticPaths: GetStaticPaths = async () => {

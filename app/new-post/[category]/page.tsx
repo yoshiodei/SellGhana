@@ -30,6 +30,7 @@ const validCategories = [
   'home',
   'property',
   'fashion',
+  'cosmetics'
 ];
 
 // Maximum file size in bytes (1MB)
@@ -229,14 +230,6 @@ export default function NewPostPage() {
               const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
               await uploadBytes(imageRef, image.file);
               const downloadURL = await getDownloadURL(imageRef);
-      
-              //   return {
-              //     name: image.file.name,
-              //     size: image.file.size,
-              //     type: image.file.type,
-              //     url: downloadURL,
-              //   };
-
               return downloadURL;
             })
           );
