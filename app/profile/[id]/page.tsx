@@ -99,7 +99,7 @@ export default function ProfilePage() {
             <div className="p-6 mb-6 bg-white rounded-lg shadow-sm">
               <div className="flex flex-col items-center md:flex-row md:items-start">
                 <div className="relative w-24 h-24 mb-4 overflow-hidden rounded-full md:mb-0 md:mr-6">
-                  <Image src={formData.image || "/placeholder.svg"} alt="Profile" fill className="object-cover" />
+                  <Image src={formData.image || "/user_placeholder.png"} alt="Profile" fill className="object-cover" />
                 </div>
                 <div className="flex-1 text-center md:text-left">
                   <div className="flex flex-col items-center justify-between md:flex-row">
@@ -237,7 +237,7 @@ export default function ProfilePage() {
                   <label className="block mb-2 text-sm font-medium text-gray-700">Profile Image</label>
                   <div className="flex items-center">
                     <div className="relative w-16 h-16 mr-4 overflow-hidden rounded-full">
-                      <Image src={formData.image || "/placeholder.svg"} alt="Profile" fill className="object-cover" />
+                      <Image src={formData.image || "/user_placeholder.png"} alt="Profile" fill className="object-cover" />
                     </div>
                     <button
                       type="button"

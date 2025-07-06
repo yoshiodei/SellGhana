@@ -48,25 +48,49 @@ export const fetchProductsByCategory = async (category: string) => {
     return products;
   };
 
+   export interface jobListing {
+     applicationDeadline: string;
+     category: string;
+     contact: { email?: string; phone?: string;};
+     createdAt: any;
+     company: string;
+     description: string;
+     employmentType: string;
+     experience: string;
+     externalLink?: string;
+     id: string;
+     image?: string;
+     isRemote?: boolean;
+     salary: string;
+     salaryDetail: {max?: number; min?: number; };
+     skills: string[];
+     title: string;
+   }
 
-   export const fetchJobList = async (type: string) => {
-      const validCategories = ['Services', 'Jobs'];
+   export const fetchJobList = async () => {
+      // const validCategories = ['Services', 'Jobs'];
 
       let q;
     
-      if(validCategories.includes(type)){
-        q = query(
-          collection(db, "jobListing"),
-          where("category", "==", type.toLowerCase())
-        );
-      } else  {
-        q = collection(db, "jobListing")
-      }
+      // if(validCategories.includes(type)){
+      //   q = query(
+      //     collection(db, "jobListing"),
+      //     where("category", "==", type.toLowerCase())
+      //   );
+      // } else  {
+      //   q = collection(db, "jobListing")
+      // }
+
+      q = collection(db, "jobListing")
 
       const querySnapshot = await getDocs(q);
+
       const jobs = querySnapshot.docs.map(doc => ({
         ...doc.data(),
-      }))
+      })) as jobListing[]
+
+      console.log("job fetched", jobs);
+      
     
       return jobs;
    }

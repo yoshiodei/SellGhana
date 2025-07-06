@@ -53,7 +53,7 @@ export default function NotificationsPage() {
               >
                 <div className="relative flex-shrink-0 mr-4">
                   <div className="relative w-10 h-10 overflow-hidden rounded-full">
-                    <Image src={notification.image || "/placeholder.svg"} alt="" fill className="object-cover" />
+                    <Image src={notification.image || "/user_placeholder.png"} alt="" fill className="object-cover" />
                   </div>
                   {!notification.read && (
                     <span className="absolute top-0 right-0 w-3 h-3 bg-blue-500 border-2 border-white rounded-full"></span>

@@ -43,7 +43,7 @@ export default function ProductCard({ product }: { product: FirebaseProduct}) {
     <Link href={`/product/${product.id}`} className="group">
       <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
         <Image
-          src={productImage || "/placeholder.svg"}
+          src={productImage || "/user_placeholder.png"}
           alt={product.name}
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-105"

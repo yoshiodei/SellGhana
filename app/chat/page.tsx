@@ -282,7 +282,7 @@ export default function ChatPage() {
               <div className="relative mr-3">
                 <div className="relative w-12 h-12 overflow-hidden rounded-full">
                   <Image
-                    src={otherUser.avatar || "/placeholder.svg"}
+                    src={otherUser.avatar || "/user_placeholder.png"}
                     alt={otherUser.name}
                     fill
                     className="object-cover"
@@ -344,7 +344,7 @@ export default function ChatPage() {
           <div className="flex items-center p-4">
             <div className="relative w-8 h-8 mr-3 overflow-hidden rounded-full">
               <Image
-                src={getOtherUserInfo(messages).avatar || "/placeholder.svg"}
+                src={getOtherUserInfo(messages).avatar || "/user_placeholder.png"}
                 alt={'hello word'}
                 fill
                 className="object-cover"

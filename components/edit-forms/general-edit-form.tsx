@@ -295,7 +295,7 @@ export default function GeneralEditForm({ product }: GeneralEditFormProps) {
                     <div key={index} className="relative">
                       <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
                         <Image
-                          src={imageUrl || "/placeholder.svg"}
+                          src={imageUrl || "/user_placeholder.png"}
                           alt={`Current ${index + 1}`}
                           fill
                           className="object-cover"
@@ -323,7 +323,7 @@ export default function GeneralEditForm({ product }: GeneralEditFormProps) {
                     <div key={index} className="relative">
                       <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
                         <Image
-                          src={image.preview || "/placeholder.svg"}
+                          src={image.preview || "/user_placeholder.png"}
                           alt={`New ${index + 1}`}
                           fill
                           className="object-cover"

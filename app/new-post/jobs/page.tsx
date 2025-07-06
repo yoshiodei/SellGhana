@@ -7,8 +7,15 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowLeft, Upload, X, Check, AlertCircle, Calendar, ExternalLink } from "lucide-react"
 import NavBar from "@/components/nav-bar"
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
 import ProtectedRoute from "@/lib/auth/ProtectedRoutes"
+import { db, storage } from "@/lib/firebase/firebase"
 import { ghanaRegions } from "@/lib/ghana-regions"
+import { showToast } from "@/utils/showToast"
+import { useRouter } from "next/navigation"
+import { getFirstThreeLetters } from "@/utils/getters"
+import { nanoid } from "nanoid"
+import { doc, serverTimestamp, setDoc } from "firebase/firestore"
 
 // Form data type
 interface JobForm {
@@ -28,6 +35,11 @@ interface JobForm {
   employmentType: string
   otherCategory: string
   externalLink: string
+}
+
+interface ImageType { 
+  file: File 
+  preview: string 
 }
 
 // Job categories
@@ -151,9 +163,10 @@ const SKILLS_BY_CATEGORY: Record<string, string[]> = {
 const MAX_FILE_SIZE = 1024 * 1024
 
 export default function NewJobPostPage() {
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter();
 
-  const [formData, setFormData] = useState<JobForm>({
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const initialFormState = {
     title: "",
     company: "",
     category: "",
@@ -170,14 +183,15 @@ export default function NewJobPostPage() {
     experience: "",
     employmentType: "",
     externalLink: "",
-  })
-
+  };
+  const [formData, setFormData] = useState<JobForm>(initialFormState)
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [customSkill, setCustomSkill] = useState("")
-  const [image, setImage] = useState<{ file: File; preview: string } | null>(null)
+  const [image, setImage] = useState<ImageType | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [submittedData, setSubmittedData] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
 
   // Get skills based on selected category
   const getSkillsForCategory = () => {
@@ -406,12 +420,30 @@ export default function NewJobPostPage() {
   }
 
   // Form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    try{
     if (validateForm()) {
+      const  three = getFirstThreeLetters("jobs");
+        const productId = `sg-${three}-${nanoid()}`;
+
+      const uploadSingleImage = async (image: ImageType | null, productId: string) => {
+        if(!image){
+          return null;
+        }
+
+        const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
+        await uploadBytes(imageRef, image.file);
+        const downloadURL = await getDownloadURL(imageRef);
+        return downloadURL;
+      };
+
+      const uploadImage = await uploadSingleImage(image,productId);
+
       // Prepare the data object
       const jobData = {
+        id: productId,
         title: formData.title,
         company: formData.company,
         category: formData.category,
@@ -438,23 +470,30 @@ export default function NewJobPostPage() {
         applicationDeadline: formData.applicationDeadline,
         experience: formData.experience,
         employmentType: formData.employmentType,
-        image: image
-          ? {
-              name: image.file.name,
-              size: image.file.size,
-              type: image.file.type,
-            }
-          : null,
-        createdAt: new Date().toISOString(),
+        image: uploadImage || "",
+        createdAt: serverTimestamp(),
         externalLink: formData.externalLink,
       }
 
       // In a real app, you would submit this data to your backend
       console.log("Job posting submitted:", jobData)
 
+      await setDoc(doc(db, "jobListing", productId), jobData);
+      
       // Show the submitted data
       // setSubmittedData(jobData)
       // setIsSubmitted(true)
+
+      showToast("Post added successfully","success");
+      setFormData(initialFormState);
+      router.push("/");
+
+    }
+    setLoading(false);
+    } catch (error){
+      setLoading(false);
+      showToast("Error adding post","error")
+      console.error('Error submitting listing:', error);
     }
   }
 
@@ -958,7 +997,7 @@ export default function NewJobPostPage() {
                   {image && (
                     <div className="relative w-32 h-32 overflow-hidden bg-gray-100 rounded-lg">
                       <Image
-                        src={image.preview || "/placeholder.svg"}
+                        src={image.preview || "/user_placeholder.png"}
                         alt="Company logo preview"
                         fill
                         className="object-contain"

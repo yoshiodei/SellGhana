@@ -8,7 +8,15 @@ import Image from "next/image"
 import { ArrowLeft, Upload, X, Check, AlertCircle } from "lucide-react"
 import NavBar from "@/components/nav-bar"
 import ProtectedRoute from "@/lib/auth/ProtectedRoutes"
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
 import { ghanaRegions } from "@/lib/ghana-regions"
+import { showToast } from "@/utils/showToast"
+import { db, storage } from "@/lib/firebase/firebase"
+import { getFirstThreeLetters } from "@/utils/getters"
+import { nanoid } from "nanoid"
+import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { useRouter } from "next/navigation"
+
 
 // Form data type
 interface PropertyForm {
@@ -44,8 +52,9 @@ const MAX_FILE_SIZE = 1024 * 1024
 
 export default function PropertyFormPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter();
 
-  const [formData, setFormData] = useState<PropertyForm>({
+  const initialFormState = {
     listingType: "",
     title: "",
     propertyType: "",
@@ -62,10 +71,13 @@ export default function PropertyFormPage() {
     contactEmail: "",
     contactPhone: "",
     description: "",
-  })
+  }
+
+  const [formData, setFormData] = useState<PropertyForm>(initialFormState)
 
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [submittedData, setSubmittedData] = useState<any>(null)
 
@@ -244,12 +256,26 @@ export default function PropertyFormPage() {
   }
 
   // Form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
+    setLoading(true)
+    
+    try{
     if (validateForm()) {
+      const  three = getFirstThreeLetters("property");
+        const productId = `sg-${three}-${nanoid()}`;
+  
+        const uploadedImages = await Promise.all(
+          images.map(async (image) => {
+            const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
+            await uploadBytes(imageRef, image.file);
+            const downloadURL = await getDownloadURL(imageRef);
+            return downloadURL;
+          })
+      );
       // Prepare the data object
       const propertyData = {
+        id: productId,
         listingType: formData.listingType,
         title: formData.title,
         propertyType: formData.propertyType,
@@ -266,21 +292,29 @@ export default function PropertyFormPage() {
         contactEmail: formData.contactEmail,
         contactPhone: formData.contactPhone,
         description: formData.description,
-        images: images.map((img) => ({
-          name: img.file.name,
-          size: img.file.size,
-          type: img.file.type,
-        })),
-        createdAt: new Date().toISOString(),
+        images: uploadedImages,
+        createdAt: serverTimestamp(),
       }
 
       // Log the collected form data
       console.log("Property Form Submission Data:", propertyData)
 
+      await setDoc(doc(db, "productListing", productId), propertyData);
       // In a real app, you would submit this data to your backend
       // For now, we'll just show the submitted data
       setSubmittedData(propertyData)
       setIsSubmitted(true)
+
+      showToast("Post added successfully","success");
+      setFormData(initialFormState);
+      router.push("/");
+    }
+
+      setLoading(false);
+    } catch (error){
+      setLoading(false);
+      showToast("Error adding post", "error")
+      console.error('Error submitting listing:', error);
     }
   }
 
@@ -308,33 +342,6 @@ export default function PropertyFormPage() {
             <h1 className="mb-2 text-2xl font-bold">Create Property Listing</h1>
             <p className="mb-6 text-gray-600">Fill in the details to list your property</p>
 
-            {isSubmitted ? (
-              <div className="p-6 bg-white rounded-lg shadow">
-                <div className="flex items-center mb-4 text-green-600">
-                  <Check className="w-6 h-6 mr-2" />
-                  <h2 className="text-xl font-semibold">Property Listed Successfully!</h2>
-                </div>
-
-                <div className="p-4 mb-6 bg-gray-50 rounded-lg">
-                  <h3 className="mb-2 font-medium">Property Details:</h3>
-                  <pre className="p-4 overflow-auto text-sm bg-gray-100 rounded">
-                    {JSON.stringify(submittedData, null, 2)}
-                  </pre>
-                </div>
-
-                <div className="flex justify-between">
-                  <Link
-                    href="/new-post/property"
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100"
-                  >
-                    List Another Property
-                  </Link>
-                  <Link href="/" className="px-4 py-2 text-white bg-black rounded-md hover:bg-gray-800">
-                    Go to Home
-                  </Link>
-                </div>
-              </div>
-            ) : (
               <form onSubmit={handleSubmit} className="p-6 bg-white rounded-lg shadow">
                 {/* Listing Type */}
                 <div className="mb-4">
@@ -729,7 +736,7 @@ export default function PropertyFormPage() {
                         <div key={index} className="relative">
                           <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
                             <Image
-                              src={image.preview || "/placeholder.svg"}
+                              src={image.preview || "/user_placeholder.png"}
                               alt={`Preview ${index + 1}`}
                               fill
                               className="object-cover"
@@ -753,12 +760,11 @@ export default function PropertyFormPage() {
 
                 {/* Submit Button */}
                 <div className="mt-6">
-                  <button type="submit" className="w-full px-6 py-3 text-white bg-primary rounded-md hover:bg-primary-light">
-                    List Property
+                  <button type="submit" disabled={loading} className="w-full px-6 py-3 text-white bg-primary rounded-md hover:bg-primary-light">
+                    {loading ? '...loading' : 'List Property'}
                   </button>
                 </div>
               </form>
-            )}
           </div>
         </div>
       </main>

@@ -60,7 +60,7 @@ export default function SingleNotificationPage({ params }: { params: { id: strin
             <div className="flex items-start mb-6">
               <div className="relative flex-shrink-0 mr-4">
                 <div className="relative w-12 h-12 overflow-hidden rounded-full">
-                  <Image src={notification.image || "/placeholder.svg"} alt="" fill className="object-cover" />
+                  <Image src={notification.image || "/user_placeholder.png"} alt="" fill className="object-cover" />
                 </div>
               </div>
               <div>

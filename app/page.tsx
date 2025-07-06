@@ -107,7 +107,7 @@ export default function Home() {
       <section className="py-8 bg-gray-50">
         <div className="container px-4 mx-auto">
           <h2 className="mb-6 text-2xl font-bold">Categories</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-5 md:grid-cols-10">
+          <div className="grid grid-cols-3 gap-4 md:grid-cols-5 lg:grid-cols-10">
             <Link href="/category/electronics" className="flex flex-col items-center">
               <div className="flex items-center justify-center w-16 h-16 mb-2 bg-white border rounded-lg shadow-sm hover:border-primary">
                 <Smartphone className="w-8 h-8 text-gray-700" />
@@ -170,6 +170,8 @@ export default function Home() {
               </div>
               <span className="text-xs text-center font-semibold text-gray-600">Books</span>
             </Link>
+
+            <div className="md:hidden" />
 
             <Link href="/jobs" className="flex flex-col items-center">
               <div className="flex items-center justify-center w-16 h-16 mb-2 bg-white border rounded-lg shadow-sm hover:border-primary">

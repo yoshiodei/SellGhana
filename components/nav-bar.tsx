@@ -193,7 +193,7 @@ export default function NavBar() {
                     <div className="relative w-10 h-10 mr-3 overflow-hidden rounded-full bg-gray-200">
                       {user.photoURL ? (
                         <Image
-                          src={user.photoURL || "/placeholder.svg"}
+                          src={user.photoURL || "/user_placeholder.png"}
                           alt={user.displayName || "User"}
                           fill
                           className="object-cover"

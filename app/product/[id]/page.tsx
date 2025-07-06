@@ -224,7 +224,7 @@ export default function ProductPage() {
     if (product) {
       // Navigate to edit page based on product category
       const category = product.category?.toLowerCase() || "general"
-      router.push(`/edit-product/${product.id}?category=${category}`)
+      router.push(`/edit-post/${product.id}?category=${category}`)
     }
   }
 
@@ -336,7 +336,7 @@ export default function ProductPage() {
                     onClick={() => setMainImage(img)}
                   >
                     <Image
-                      src={img || "/placeholder.svg"}
+                      src={img || "/user_placeholder.png"}
                       alt={`Product view ${index + 1}`}
                       fill
                       className="object-cover"
@@ -365,26 +365,26 @@ export default function ProductPage() {
             
             {/* Car details */}
             {(product?.type || product?.vin || product?.mileage) && (<div>
-              <p className="mb-2 text-slate-400 font-bold">Vehicle Details</p>
+              <h3 className="mb-2 text-lg font-medium">Vehicle Details</h3>
               <div className="flex gap-y-1 flex-col">
-                {product?.type && (<p className="text-sm text-gray-600">{`Car Type: ${product?.type}`}</p>)}
-                {product?.mileage && (<p className="text-sm text-gray-600">{`Mileage: ${product?.mileage}`}</p>)}
-                {product?.vin && (<p className="text-sm text-gray-600">{`VIN: ${product?.vin}`}</p>)}
+                {product?.type && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Car Type:</span>{`  ${product?.type}`}</p>)}
+                {product?.mileage && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Mileage:</span>{`  ${product?.mileage}`}</p>)}
+                {product?.vin && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">VIN:</span>{`  ${product?.vin}`}</p>)}
               </div>
             </div>)}
 
             {/* Book details */}
             {(product?.author || product?.datePublished || product?.format || product?.genre || product?.isbn || product?.language || product?.pages || product?.publisher) && (<div>
-              <p className="mb-2 text-slate-400 font-bold">Book Details</p>
+              <h3 className="mb-2 text-lg font-medium">Book Detail</h3>
               <div className="flex gap-y-1 flex-col">
-                {product?.author && (<p className="text-sm text-gray-600">{`Author: ${product?.author}`}</p>)}
-                {product?.publisher && (<p className="text-sm text-gray-600">{`Publisher: ${product?.publisher}`}</p>)}
-                {product?.datePublished && (<p className="text-sm text-gray-600">{`Date Published: ${product?.datePublished}`}</p>)}
-                {product?.genre && (<p className="text-sm text-gray-600">{`Genre: ${product?.genre}`}</p>)}
-                {product?.format && (<p className="text-sm text-gray-600">{`Format: ${product?.format}`}</p>)}
-                {product?.language && (<p className="text-sm text-gray-600">{`Language: ${product?.language}`}</p>)}
-                {product?.isbn && (<p className="text-sm text-gray-600">{`ISBN: ${product?.isbn}`}</p>)}
-                {product?.pages && (<p className="text-sm text-gray-600">{`Pages: ${product?.pages} pages`}</p>)}
+                {product?.author && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Author:</span>{`  ${product?.author}`}</p>)}
+                {product?.publisher && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Publisher:</span>{`  ${product?.publisher}`}</p>)}
+                {product?.datePublished && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Date Published:</span>{`  ${product?.datePublished}`}</p>)}
+                {product?.genre && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Genre:</span>{`  ${product?.genre}`}</p>)}
+                {product?.format && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Format:</span>{`  ${product?.format}`}</p>)}
+                {product?.language && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Language:</span>{`  ${product?.language}`}</p>)}
+                {product?.isbn && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">ISBN:</span>{`  ${product?.isbn}`}</p>)}
+                {product?.pages && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Pages:</span>{`  ${product?.pages} pages`}</p>)}
               </div>
             </div>)}
 

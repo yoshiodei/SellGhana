@@ -97,7 +97,7 @@ export interface ChatListDataType {
 //       productId,
 //       productName: productName || "Unknown Product",
 //       productPrice: productPrice || 0,
-//       productImage: productImage || "/placeholder.svg",
+//       productImage: productImage || "/user_placeholder.png",
 //       buyerId,
 //       buyerName: buyerName || "Anonymous Buyer",
 //       buyerAvatar,
