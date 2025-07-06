@@ -124,6 +124,7 @@ export default function SignInPage() {
       const data = await res.json();
   
       if (!res.ok) {
+        showToast("Google sign-in failed!!!", "error");
         throw new Error(data.error || "Google sign-in failed.");
       }
   
