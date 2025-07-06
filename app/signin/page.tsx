@@ -130,6 +130,8 @@ export default function SignInPage() {
       showToast("Google sign-in successful!", "success");
       router.push("/");
     } catch (error: any) {
+      console.log("we out here!!!");
+      
       showToast((error.message || "Google sign-in failed"), "error");
     }
   }
