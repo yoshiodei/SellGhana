@@ -1,51 +1,99 @@
 import { doc, deleteDoc, updateDoc, getDoc, increment } from "firebase/firestore"
-import { ref, deleteObject, listAll } from "firebase/storage"
+import { ref, deleteObject, listAll, getStorage } from "firebase/storage"
 import { db, storage } from "./firebase"
 
 /**
  * Delete a product and all its associated images
  */
-export async function deleteProduct(productId: string, imageUrls: string[] = []): Promise<void> {
+// export async function deleteProduct(productId: string, imageUrls: string[] = []): Promise<void> {
+//   try {
+//     // Delete the product document from Firestore
+//     const productRef = doc(db, "productListing", productId)
+//     await deleteDoc(productRef)
+
+//     // Delete all associated images from Firebase Storage
+//     if (imageUrls.length > 0) {
+//       const deletePromises = imageUrls.map(async (imageUrl) => {
+//         try {
+//           // Extract the file path from the URL
+//           const url = new URL(imageUrl)
+//           const pathMatch = url.pathname.match(/\/o\/(.+)\?/)
+//           if (pathMatch) {
+//             const filePath = decodeURIComponent(pathMatch[1])
+//             const imageRef = ref(storage, filePath)
+//             await deleteObject(imageRef)
+//           }
+//         } catch (error) {
+//           console.error("Error deleting image:", imageUrl, error)
+//           // Continue with other deletions even if one fails
+//         }
+//       })
+
+//       await Promise.allSettled(deletePromises)
+//     }
+
+//     // Also try to delete the entire product folder in storage
+//     try {
+//       const productFolderRef = ref(storage, `products/${productId}`)
+//       const listResult = await listAll(productFolderRef)
+
+//       const deleteFilePromises = listResult.items.map((itemRef) => deleteObject(itemRef))
+//       await Promise.allSettled(deleteFilePromises)
+//     } catch (error) {
+//       console.error("Error deleting product folder:", error)
+//       // This is not critical, continue
+//     }
+
+//     console.log("Product deleted successfully:", productId)
+//   } catch (error) {
+//     console.error("Error deleting product:", error)
+//     throw new Error("Failed to delete product. Please try again.")
+//   }
+// }
+
+export async function deleteProduct(productId: string, imagePaths: string[] = []): Promise<void> {
   try {
-    // Delete the product document from Firestore
-    const productRef = doc(db, "productListing", productId)
-    await deleteDoc(productRef)
+  console.log('delete 001');
+    
+  const storage = getStorage();
+  const processedFolders = new Set<string>();
 
-    // Delete all associated images from Firebase Storage
-    if (imageUrls.length > 0) {
-      const deletePromises = imageUrls.map(async (imageUrl) => {
-        try {
-          // Extract the file path from the URL
-          const url = new URL(imageUrl)
-          const pathMatch = url.pathname.match(/\/o\/(.+)\?/)
-          if (pathMatch) {
-            const filePath = decodeURIComponent(pathMatch[1])
-            const imageRef = ref(storage, filePath)
-            await deleteObject(imageRef)
-          }
-        } catch (error) {
-          console.error("Error deleting image:", imageUrl, error)
-          // Continue with other deletions even if one fails
-        }
-      })
+  const productRef = doc(db, "productListing", productId)
+  await deleteDoc(productRef)
 
-      await Promise.allSettled(deletePromises)
-    }
+  for (const imagePath of imagePaths) {
+    const folderPath = imagePath.substring(0, imagePath.lastIndexOf("/"));
 
-    // Also try to delete the entire product folder in storage
+    // Avoid processing the same folder more than once
+    if (processedFolders.has(folderPath)) continue;
+    processedFolders.add(folderPath);
+
+    const folderRef = ref(storage, folderPath);
+
     try {
-      const productFolderRef = ref(storage, `products/${productId}`)
-      const listResult = await listAll(productFolderRef)
+      const listResult = await listAll(folderRef);
 
-      const deleteFilePromises = listResult.items.map((itemRef) => deleteObject(itemRef))
-      await Promise.allSettled(deleteFilePromises)
-    } catch (error) {
-      console.error("Error deleting product folder:", error)
-      // This is not critical, continue
+      if (listResult.items.length === 0) {
+        console.log(`No files found in ${folderPath}`);
+        continue;
+      }
+
+      for (const itemRef of listResult.items) {
+        try {
+          await deleteObject(itemRef);
+          console.log(`Deleted: ${itemRef.fullPath}`);
+        } catch (deleteErr) {
+          console.error(`Failed to delete ${itemRef.fullPath}`, deleteErr);
+        }
+      }
+
+      console.log(`Deleted all images in ${folderPath}`);
+    } catch (err) {
+      console.error(`Error deleting images in folder ${folderPath}:`, err);
     }
-
-    console.log("Product deleted successfully:", productId)
-  } catch (error) {
+  }
+  }
+  catch (error) {
     console.error("Error deleting product:", error)
     throw new Error("Failed to delete product. Please try again.")
   }

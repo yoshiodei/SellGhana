@@ -1,4 +1,4 @@
-export const getFirstThreeLetters = (input: string) => {
+export const getFirstThreeLetters = (input: string | null) => {
     if (!input || typeof input !== "string" || input.trim().length === 0) {
       return '000';
     }

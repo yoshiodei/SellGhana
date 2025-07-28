@@ -14,9 +14,10 @@ import { getFirstThreeLetters } from "@/utils/getters"
 import { nanoid } from "nanoid"
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
 import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
-import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore"
 import { showToast } from "@/utils/showToast"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
+import { FirebaseProduct } from "@/lib/firebase/firestore"
 
 // Form data type
 interface VehicleForm {
@@ -83,8 +84,8 @@ const VEHICLE_CONDITIONS = ["Brand New", "Excellent", "Good", "Fair", "Poor", "S
 // Maximum file size in bytes (1MB)
 const MAX_FILE_SIZE = 1024 * 1024
 
-export default function VehicleFormPage() {
-  const { user } = useAuthUser();
+export default function VehicleUpdateFormPage() {
+  const { id }: {id: string} = useParams();  
   const router = useRouter();
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -93,60 +94,74 @@ export default function VehicleFormPage() {
 
   const [loading, setLoading] = useState(false);
 
-  const initialFormData = {
+  const initialState = {
+    id: '',
+    name: '',
     type: "",
     make: "",
     model: "",
-    price: "",
+    price: 0,
     vin: "",
     mileage: "",
+    images: [],
+    imagesData: [],
+    description: "",
     year: "",
-    region: "",
-    suburb: "",
-    details: "",
     condition: "",
+    location: {region: '',suburb:''},
   }
 
-  const [formData, setFormData] = useState<VehicleForm>(initialFormData)
-
+  const [formData, setFormData] = useState<FirebaseProduct>(initialState)
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [oldImages, setOldImages] = useState<{url:string; path?:string; name:string;size:number;type:string;}[]>([])
   const [submittedData, setSubmittedData] = useState<any>(null)
 
   // Get suburbs for the selected region
   const getSuburbs = () => {
-    if (!formData.region) return []
-    return ghanaRegions[formData.region] || []
+      if (!formData.location.region) return []
+      return ghanaRegions[formData.location.region] || []
   }
 
   // Handle form field changes
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-
-    // Special handling for region to reset suburb when region changes
-    if (name === "region") {
-      setFormData((prev) => ({
-        ...prev,
-        region: value,
-        suburb: "",
-      }))
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }))
+   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      const { name, value } = e.target
+  
+      // Special handling for region to reset suburb when region change
+      if (name === "region") {
+          setFormData((prev) => ({
+            ...prev,
+            location: {
+              ...prev.location,
+              region: value,
+            },
+          }))
+        } else if (name === "suburb") {
+          setFormData((prev) => ({
+            ...prev,
+            location: {
+              ...prev.location,
+              suburb: value,
+            },
+          }))
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+          }))
+        }
+  
+      // Clear error when field is edited
+      if (errors[name]) {
+        setErrors((prev) => {
+          const newErrors = { ...prev }
+          delete newErrors[name]
+          return newErrors
+        })
+      }
     }
-
-    // Clear error when field is edited
-    if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev }
-        delete newErrors[name]
-        return newErrors
-      })
-    }
-  }
 
   // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,6 +211,15 @@ export default function VehicleFormPage() {
 
   // Remove image
   const removeImage = (index: number) => {
+    setOldImages((prev) => {
+      const newImages = [...prev]
+      // Revoke the object URL to avoid memory leaks
+      newImages.splice(index, 1)
+      return newImages
+    })
+  }
+
+  const removeNewImage = (index: number) => {
     setImages((prev) => {
       const newImages = [...prev]
       // Revoke the object URL to avoid memory leaks
@@ -210,57 +234,57 @@ export default function VehicleFormPage() {
     const newErrors: Record<string, string> = {}
 
     // Required fields
-    if (!formData.type) {
+    if (!formData?.type) {
       newErrors.type = "Vehicle type is required"
     }
 
-    if (!formData.make) {
+    if (!formData?.make) {
       newErrors.make = "Vehicle make is required"
     }
 
-    if (!formData.model.trim()) {
+    if (!formData?.model?.trim()) {
       newErrors.model = "Vehicle model is required"
     }
 
-    if (!formData.price.trim()) {
+    if (!formData?.price) {
       newErrors.price = "Price is required"
     } else if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
       newErrors.price = "Price must be a positive number"
     }
 
     // VIN validation (optional but must be valid if provided)
-    if (formData.vin.trim() && formData.vin.trim().length !== 17) {
+    if (formData?.vin?.trim() && formData?.vin?.trim().length !== 17) {
       newErrors.vin = "VIN must be 17 characters long"
     }
 
-    if (!formData.mileage.trim()) {
+    if (!formData?.mileage) {
       newErrors.mileage = "Mileage is required"
     } else if (isNaN(Number(formData.mileage)) || Number(formData.mileage) < 0) {
       newErrors.mileage = "Mileage must be a non-negative number"
     }
 
-    if (!formData.year) {
+    if (!formData?.year) {
       newErrors.year = "Vehicle year is required"
     }
 
-    if (!formData.condition) {
+    if (!formData?.condition) {
       newErrors.condition = "Vehicle condition is required"
     }
 
-    if (!formData.region) {
+    if (!formData?.location.region) {
       newErrors.region = "Region is required"
     }
 
-    if (formData.region && !formData.suburb) {
+    if (formData?.location?.region && !formData?.location?.suburb) {
       newErrors.suburb = "Suburb is required"
     }
 
-    if (!formData.details.trim()) {
+    if (!formData?.description?.trim()) {
       newErrors.details = "Vehicle details are required"
     }
 
-    if (images.length === 0) {
-      newErrors.images = "At least one image is required"
+    if (images.length + oldImages.length === 0) {
+        newErrors.images = "At least one image is required"
     }
 
     setErrors(newErrors)
@@ -276,78 +300,69 @@ export default function VehicleFormPage() {
       if (validateForm()) {
       // Prepare the data object
 
-      const three = getFirstThreeLetters("vehicles");
-      const productId = `sg-${three}-${nanoid()}`;
-
-      const uploadedImages = await Promise.all(
-        images.map(async (image) => {
-        const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
-        await uploadBytes(imageRef, image.file);
-        const downloadURL = await getDownloadURL(imageRef);
-          return downloadURL;
-        })
-      );
-
-      const imagesData = await Promise.all(
-          images.map(async (image) => {
-            const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
-            const snapshot = await uploadBytes(imageRef, image.file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-            return {
-              url: downloadURL,
-              path: snapshot.ref.fullPath,
-              name: image.file.name,
-              size: image.file.size,
-              type: image.file.type,
-            };
-          })
-      );
+      const finalBrand = formData?.brand === "Other" ? formData?.otherBrand : formData?.brand
       
+            const uploadedImages = await Promise.all(
+                images.map(async (image) => {
+                const imageRef = ref(storage, `productImages/${id}/${image.file.name}`);
+                // if(image.file)
+                await uploadBytes(imageRef, image.file);
+                const downloadURL = await getDownloadURL(imageRef);
+                return downloadURL;
+                })
+            );
+        
+            const imagesData = await Promise.all(
+                images.map(async (image) => {
+                const imageRef = ref(storage, `productImages/${id}/${image.file.name}`);
+                const snapshot = await uploadBytes(imageRef, image.file);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                return {
+                    url: downloadURL,
+                    path: snapshot.ref.fullPath,
+                    name: image.file.name,
+                    size: image.file.size,
+                    type: image.file.type,
+                };
+                })
+            );
+        
+            const oldImagesData = oldImages.map((image) => (
+                image.url
+            ))
+                    
 
       const vehicleData = {
-        id: productId,
+        id,
         type: formData.type,
         make: formData.make,
         model: formData.model,
+        year: formData.year,
         name: `${formData.year} ${formData.make === 'Other' ? '': formData.make} ${formData.model === 'Other' ? '': formData.model}`,
         price: Number(formData.price),
         condition: formData.condition,
-        description: formData.details,
-        images: uploadedImages,
-        imagesData,
+        location: {
+            region: formData.location.region,
+            suburb: formData.location.suburb,
+        },
+        description: formData.description,
+        images: [ ...oldImagesData , ...uploadedImages],
+        imagesData: [...oldImages, ...imagesData],
         category: "vehicles",
         vin: formData.vin,
         mileage: Number(formData.mileage),
-        year: formData.year,
-        location: {
-          region: formData.region,
-          suburb: formData.suburb,
-        },
-        promotion: {
-          isPromoted: false,
-          datePromoted:"",
-          dateOfExpiry:"",
-          promoType: ""
-          },
-        viewCount: [],
-        vendor:{
-          uid: user?.uid || "",   
-          image: user?.photoURL || "",
-          name: user?.displayName || "", 
-        },
-        createdAt: serverTimestamp(),
+        lastEdited: serverTimestamp(),
       }
 
       // In a real app, you would submit this data to your backend
       console.log("Vehicle listing submitted:", vehicleData)
 
-      await setDoc(doc(db, "productListing", productId), vehicleData);
+      const productRef = doc(db, "productListing", id);
+      
+      await updateDoc(productRef, vehicleData);
 
-      showToast("Post added successfully","success");
+      showToast("Post updated successfully","success");
     
-      setSubmittedData(vehicleData)
-      setIsSubmitted(true)
-      setFormData(initialFormData)
       router.push("/");
       }
 
@@ -368,6 +383,51 @@ export default function VehicleFormPage() {
     }
   }, [])
 
+  const fetchProductData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+  
+        // Fetch the product by ID
+        const productDocRef = doc(db, "productListing", id)
+        const productDocSnap = await getDoc(productDocRef)
+       
+        if (!productDocSnap.exists()) {
+          console.log('does not exist');
+          
+          // setError("Product not found")
+          setLoading(false)
+          return
+        }
+  
+        // Get the product data
+        const productData = {
+          id: productDocSnap.id,
+          ...productDocSnap.data(),
+        } as FirebaseProduct
+        
+  
+        console.log("product data for edit", productData);
+  
+        const newImages = productData.imagesData.map((file) => (
+          file
+        )
+        )
+  
+        setOldImages(newImages);
+        setFormData(productData);
+      } catch (err) {
+        console.error("Error fetching product:", err)
+        setError("Failed to load product. Please try again later.")
+      } finally {
+        setLoading(false)
+      }
+  }
+  
+    useEffect(() => { 
+      fetchProductData()
+     }, [id, router])
+
   return (
     <ProtectedRoute>
       <main className="min-h-screen bg-gray-50">
@@ -380,8 +440,8 @@ export default function VehicleFormPage() {
               Back to categories
             </Link>
 
-            <h1 className="mb-2 text-2xl font-bold">List Your Vehicle</h1>
-            <p className="mb-6 text-gray-600">Fill in the details to create your vehicle listing</p>
+            <h1 className="mb-2 text-2xl font-bold">Update listing - Vehicles</h1>
+            <p className="mb-6 text-gray-600">Update your listing details</p>
 
               <form onSubmit={handleSubmit} className="p-6 bg-white rounded-lg shadow">
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -571,7 +631,7 @@ export default function VehicleFormPage() {
                     <select
                       id="region"
                       name="region"
-                      value={formData.region}
+                      value={formData.location.region}
                       onChange={handleChange}
                       className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                         errors.region ? "border-red-500" : "border-gray-300"
@@ -588,7 +648,7 @@ export default function VehicleFormPage() {
                   </div>
 
                   {/* Suburb */}
-                  {formData.region && (
+                  {formData.location.region && (
                     <div>
                       <label htmlFor="suburb" className="block mb-2 text-sm font-medium text-gray-700">
                         Suburb <span className="text-red-500">*</span>
@@ -596,7 +656,7 @@ export default function VehicleFormPage() {
                       <select
                         id="suburb"
                         name="suburb"
-                        value={formData.suburb}
+                        value={formData.location.suburb}
                         onChange={handleChange}
                         className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                           errors.suburb ? "border-red-500" : "border-gray-300"
@@ -622,7 +682,7 @@ export default function VehicleFormPage() {
                   <textarea
                     id="details"
                     name="details"
-                    value={formData.details}
+                    value={formData.description}
                     onChange={handleChange}
                     rows={5}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
@@ -630,7 +690,7 @@ export default function VehicleFormPage() {
                     }`}
                     placeholder="Describe your vehicle in detail, including its condition, history, features, and any other relevant information."
                   />
-                  {errors.details && <p className="mt-1 text-sm text-red-500">{errors.details}</p>}
+                  {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
                 </div>
 
                 {/* Image Upload */}
@@ -660,7 +720,7 @@ export default function VehicleFormPage() {
                         multiple
                         onChange={handleImageUpload}
                         className="hidden"
-                        disabled={images.length >= 4}
+                        disabled={oldImages.length + images.length >= 4}
                       />
                     </label>
                     {errors.images && (
@@ -672,32 +732,54 @@ export default function VehicleFormPage() {
                   </div>
 
                   {/* Image Previews */}
-                  {images.length > 0 && (
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                      {images.map((image, index) => (
-                        <div key={index} className="relative">
-                          <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
-                            <Image
-                              src={image.preview || "/user_placeholder.png"}
-                              alt={`Preview ${index + 1}`}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                          <p className="mt-1 text-xs text-gray-500 truncate">
-                            {(image.file.size / 1024).toFixed(0)} KB
-                          </p>
+                  {(oldImages.length + images.length > 0) && (
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                        {oldImages.map((image, index) => (
+                            <div key={index} className="relative">
+                            <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
+                                <Image
+                                src={image.url}
+                                alt={`Preview ${index + 1}`}
+                                fill
+                                className="object-cover"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <p className="mt-1 text-xs text-gray-500 truncate">
+                                {(image.size / 1024).toFixed(0)} KB
+                            </p>
+                            </div>
+                        ))}
+                        {(oldImages.length + images.length <= 4 && images.length > 0) && (images.map((image, index) => (
+                            <div key={index} className="relative">
+                            <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
+                                <Image
+                                src={image.preview || "/user_placeholder.png"}
+                                alt={`Preview ${index + 1}`}
+                                fill
+                                className="object-cover"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => removeNewImage(index)}
+                                className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <p className="mt-1 text-xs text-gray-500 truncate">
+                                {(image.file.size / 1024).toFixed(0)} KB
+                            </p>
+                            </div>
+                        )))}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                    )}
                 </div>
 
                 {/* Submit Button */}

@@ -5,22 +5,59 @@ import { LogsIcon } from "lucide-react"
 
 export interface FirebaseProduct {
   id: string
+  make?: string,
+  model?: string,
+  year?: string,
   name: string
   price: number
+  company?: string
+  isRemote?: boolean
   description: string
   images: string[]
+  imagesData: {
+    path?: string
+    url: string
+    name: string
+    size: number
+    type: string
+  }[]
+  imageData?: {
+    path?: string
+    url: string
+    name: string
+    size: number
+    type: string
+  }
+  salaryDetail?: {
+    salaryMin?: number
+    salaryMax?: number
+  }
+  skills?: string[]
   category?: string
+  otherCategory?: string
   condition?: string
-  location?: {region: string, suburb: string}
+  location: {region: string, suburb: string}
   createdAt?: any
   userId?: string
   vendor?: {image: string, name: string, uid: string}
   tag?: string
+  salaryMin?: number
+  employmentType?: string
+  experience?: string
+  phone?: string 
+  email?: string 
+  applicationDeadline?: string
+  externalLink?: string
+  salaryDetails?: {
+    salaryMin?: number
+    salaryMax?: number
+  }
+  salaryMax?: number
   viewCount?: number
   vin?: string
   mileage?: string
   type?: string
-  author?: string
+  authors?: string
   datePublished?: string
   format?: string
   genre?: string
@@ -28,6 +65,17 @@ export interface FirebaseProduct {
   language?: string
   pages?: string | number
   publisher?: string
+  brand?: string
+  otherBrand?: string
+  listingType?: string
+  title?: string
+  propertyType?: string
+  bedrooms?: number
+  bathrooms?: number
+  furnishing?: string
+  size?: number
+  availabilityDate?: string
+  propertyLocation?: string
 }
 
 // Cache for products

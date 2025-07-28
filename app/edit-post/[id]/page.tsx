@@ -14,11 +14,12 @@ import { brandsByCategory } from "@/utils/productData"
 import { nanoid } from 'nanoid'
 import { getFirstThreeLetters } from "@/utils/getters"
 import { useAuth } from "@/lib/auth/context/AuthContext"
-import { addDoc, collection, doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { addDoc, collection, doc, getDoc, query, serverTimestamp, setDoc, where } from "firebase/firestore"
 import { db, storage } from "@/lib/firebase/firebase"
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
 import { showToast } from "@/utils/showToast"
 import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
+import { FirebaseProduct } from "@/lib/firebase/firestore"
 
 const validCategories = [
   'electronics',
@@ -37,24 +38,69 @@ const validCategories = [
 const MAX_FILE_SIZE = 1024 * 1024
 
 export default function NewPostPage() {
+  const path = useSearchParams();
+
+  console.log("This is the search param", path.get("category"));
+  const categoryTitle = path.get("category");
+  
   const { user } = useAuthUser();
   
   console.log("vendor data ooo", user);
   
+  const { id }: {id: string} = useParams();  
 
-  const { category: categoryTitle }: {category: string} = useParams();  
-  console.log("category title", categoryTitle);
+  console.log("category title", id);
   
   const searchParams = useSearchParams()
+
+  const [product, setProduct] = useState<FirebaseProduct | null>(null);
+  const [error, setError] = useState<string | null>(null)
+
   const categoryId = searchParams.get("category")
   const category = categories.find((c) => c.id === categoryId)
   const router = useRouter();
 
   const [isValid, setIsValid] = useState<boolean | null>(null);
 
+  const fetchProductData = async () => {
+        try {
+          setLoading(true)
+          setError(null)
+  
+          // Fetch the product by ID
+          const productDocRef = doc(db, "productListing", id)
+          const productDocSnap = await getDoc(productDocRef)
+          
+          if (!productDocSnap.exists()) {
+            console.log('does not exist');
+            
+            // setError("Product not found")
+            setLoading(false)
+            return
+          }
+  
+          // Get the product data
+          const productData = {
+            id: productDocSnap.id,
+            ...productDocSnap.data(),
+          } as FirebaseProduct
+  
+          console.log("product data for edit", productData);
+          
+          setProduct(productData);
+        } catch (err) {
+          console.error("Error fetching product:", err)
+          setError("Failed to load product. Please try again later.")
+        } finally {
+          setLoading(false)
+        }
+      }
+
   useEffect(() => {
-    if (categoryTitle && !validCategories.includes(categoryTitle)) {
+    if (!id || !categoryTitle || !validCategories.includes(categoryTitle)) {
       router.push("/not-found")
+    } else {
+      fetchProductData();
     }
   }, [categoryTitle, router])
 
@@ -283,6 +329,8 @@ export default function NewPostPage() {
         console.error('Error submitting listing:', error);
     }
   }
+
+
 
   return (
     <ProtectedRoute>

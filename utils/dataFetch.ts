@@ -123,9 +123,26 @@ export const fetchProductsByCategory = async (category: string) => {
       ...doc.data(),
     })) as FirebaseProduct[]
     
-    console.log("Listingss:", listings);
+    console.log("Listings:", listings);
     
     return listings
+  }
+
+
+  export const getUserJobs = async (userId: string) => {
+    const q = query(
+      collection(db, "jobListing"),
+      where("vendor.uid", "==", userId)
+    )
+  
+    const querySnapshot = await getDocs(q)
+    const jobs = querySnapshot.docs.map(doc => ({
+      ...doc.data(),
+    })) as jobListing[]
+    
+    console.log("Job Listings:", jobs);
+    
+    return jobs
   }
 
 

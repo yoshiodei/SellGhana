@@ -9,12 +9,15 @@ import { Smartphone, Car, Shirt, HomeIcon, Sofa, Dumbbell, Gamepad2, BookOpen, B
 import SoapDispenser from '@/components/icons/soap-dispenser-droplet.svg';
 import { useProducts } from "@/hooks/use-products"
 import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
+import { useRouter } from "next/navigation"
 
 export default function Home() {
   const {user, loading: authLoading } = useAuthUser();
+  const route = useRouter();
   console.log("profile auth---->", user);
 
   // const [showScrollTop, setShowScrollTop] = useState(false)
+  const [mouseOver, setMouseOver] = useState(false)
   const featuredRef = useRef<HTMLDivElement>(null)
   const { products, loading } = useProducts();
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
@@ -103,6 +106,68 @@ export default function Home() {
         </div>
       </section>
 
+
+
+       {/* Brands Carousel */}
+       {/* <section className="mb-[60px]" >
+         <h2 className="px-4 mb-6 text-2xl font-bold">Top Brands</h2>
+        <div className={`slider w-full bg-black`} onMouseOver={() => setMouseOver(true)} onMouseOut={() => setMouseOver(false)}>
+          <div className={`${mouseOver ? "lg:slide-track-pause slide-track-pause-sm" : "lg:slide-track slide-track-sm"} md:slide-track`}>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="/icons8-nike.svg" className="h-[80%] lg:h-full hover:opacity-50" alt="nike" title="nike" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="/icons8-nike.svg" className="h-[80%] lg:h-full hover:opacity-50" alt="nike" title="nike" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/adidas")}>
+              <img src="https://seeklogo.com/images/A/adidas-logo-344EED0709-seeklogo.com.png" className="h-[70%] lg:h-full hover:opacity-50" alt="adidas" title="adidas" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/apple")}>
+              <img src="https://cdn.iconscout.com/icon/free/png-256/free-apple-icon-download-in-svg-png-gif-file-formats--social-icons-color-pack-logos-432495.png?f=webp" className="h-[60%] lg:h-[80%] hover:opacity-50" alt="apple" title="apple" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/samsung")}>
+              <img src="https://cdn.iconscout.com/icon/free/png-256/free-samsung-logo-icon-download-in-svg-png-gif-file-formats--brand-mobile-logos-pack-icons-226432.png?f=webp" className="w-[100px] lg:w-[130px] hover:opacity-50" alt="samsung" title="samsung" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Microsoft_logo.svg/640px-Microsoft_logo.svg.png" className="h-[65%] hover:opacity-50" alt="" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="https://images.seeklogo.com/logo-png/3/2/dell-logo-png_seeklogo-39672.png" className="h-full hover:opacity-50" alt="" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="https://upload.wikimedia.org/wikipedia/commons/6/6f/HP_logo_630x630.png" className="h-full hover:opacity-50" alt="" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="https://images.seeklogo.com/logo-png/9/2/nintendo-logo-png_seeklogo-99658.png" className="w-[120px] hover:opacity-50" alt="" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="https://pngimg.com/d/sony_playstation_PNG17532.png" className="h-[70%] hover:opacity-50" alt="" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="https://www.freeiconspng.com/uploads/toyota-logo-png-25.png" className="w-[120px] hover:opacity-50" alt="" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="https://i.pinimg.com/736x/dc/aa/15/dcaa15b604a36e80564c7a5008d888be.jpg" className="h-[70%] hover:opacity-50" alt="" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="https://cdn4.iconfinder.com/data/icons/logos-brands-in-colors/660/kia-logo-new-512.png" className="w-[130px] hover:opacity-50" alt="" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="https://iconlogovector.com/uploads/images/2025/05/lg-683aaeb69b683-Hisense.webp" className="w-[110px] hover:opacity-50" alt="" />
+            </button>
+            <button className="slide">
+              <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpje_CCUlUvR2DZK-0yj1ewCHk3GNIai2ojQ&s" className="w-[130px] hover:opacity-50" alt="" />
+            </button>
+            <button className="slide" onClick={() => route.push("/category/nike")}>
+              <img src="/icons8-nike.svg" className="h-[80%] lg:h-full hover:opacity-50" alt="nike" title="nike" />
+            </button>
+          </div>
+        </div>
+      </section> */}
+
+
+
+
       {/* Categories */}
       <section className="py-8 bg-gray-50">
         <div className="container px-4 mx-auto">
@@ -183,6 +248,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
 
       {/* Featured Products */}
       <section ref={featuredRef} className="py-8 bg-white">

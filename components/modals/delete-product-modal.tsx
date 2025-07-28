@@ -6,6 +6,7 @@ import { useAppSelector, useAppDispatch } from "@/lib/redux/hooks"
 import { closeDeleteProductModal } from "@/lib/redux/slices/uiSlice"
 import { deleteProduct } from "@/lib/firebase/product"
 import { useRouter } from "next/navigation"
+import { showToast } from "@/utils/showToast"
 
 export default function DeleteProductModal() {
   const dispatch = useAppDispatch()
@@ -27,15 +28,19 @@ export default function DeleteProductModal() {
       setIsDeleting(true)
       setError(null)
       await deleteProduct(deleteProductData.productId, deleteProductData.images || [])
-
+      console.log('delete 002');
+      setIsDeleting(false)
       // Close modal and redirect
       dispatch(closeDeleteProductModal())
       router.push("/")
-
+      console.log('delete 003');
       // Show success message (you could also use a toast notification here)
       setTimeout(() => {
-        alert("Product deleted successfully!")
+        // alert("Product deleted successfully!")
+        showToast("Product deleted successfully!","success")
       }, 100)
+      console.log('delete 004');
+      // setIsDeleting(false)
     } catch (error) {
       console.error("Error deleting product:", error)
       setError("Failed to delete product. Please try again.")

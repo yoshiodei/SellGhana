@@ -86,7 +86,11 @@ export default function JobPage() {
   const [viewCount, setViewCount] = useState<number>(0)
 
   // Check if current user is the owner of the job
-  const isOwner = user && job && user.uid === job.userId
+  const isOwner = user?.uid === job?.vendor?.uid
+
+  console.log("user obj -->", user);
+  console.log("job obj -->", job);
+  
 
   // Fetch the job poster information
   const fetchJobPoster = async (userId: string) => {
@@ -242,14 +246,13 @@ export default function JobPage() {
   const handleApplyExternal = () => {
     if (job?.externalLink) {
       window.open(job.externalLink, "_blank")
-    } else if (job?.externalLink) {
-      window.open(`mailto:${job.externalLink}?subject=Application for ${job.name}`, "_blank")
-    }
+    } 
   }
 
   const handleEdit = () => {
     if (job) {
-      router.push(`/edit-product/${job.id}?category=job`)
+      // router.push(`/edit-product/${job.id}?category=job`)
+      router.push(`/edit-post/${job.id}/job`)
     }
   }
 
@@ -482,7 +485,7 @@ export default function JobPage() {
                   <button
                     onClick={handleApplyExternal}
                     disabled={!job?.externalLink}
-                    className="w-full mb-3 px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                    className="w-full mb-3 px-4 py-3 bg-primary text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                   >
                     <Send className="w-4 h-4 mr-2" />
                     Apply Now
@@ -526,14 +529,14 @@ export default function JobPage() {
                 <div className="space-y-3">
                   <button
                     onClick={handleEdit}
-                    className="w-full flex items-center justify-center px-4 py-2 text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50 transition-colors"
+                    className="w-full font-bold flex items-center justify-center px-4 py-2 text-gray-600 bg-slate-200 rounded-md hover:bg-slate-300 transition-colors"
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     Edit Job
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="w-full flex items-center justify-center px-4 py-2 text-red-600 border border-red-600 rounded-md hover:bg-red-50 transition-colors"
+                    className="w-full font-bold flex items-center justify-center px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-500 transition-colors"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete Job

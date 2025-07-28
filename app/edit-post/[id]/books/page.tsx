@@ -2,10 +2,10 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useId } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Upload, X, Check, AlertCircle } from "lucide-react"
 import NavBar from "@/components/nav-bar"
 import ProtectedRoute from "@/lib/auth/ProtectedRoutes"
@@ -15,8 +15,9 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
 import { showToast } from "@/utils/showToast"
 import { getFirstThreeLetters } from "@/utils/getters"
 import { nanoid } from "nanoid"
-import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { addDoc, collection, doc, getDoc, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore"
 import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
+import { FirebaseProduct } from "@/lib/firebase/firestore"
 
 // Book genres
 const BOOK_GENRES = [
@@ -109,40 +110,68 @@ interface BookForm {
   suburb: string
 }
 
+interface FileType { 
+  file: File;
+  fileData: 
+  { 
+    url: string,
+    name: string,
+    size: number,
+    type: string,
+  };
+  preview: string;
+}
+
 export default function BookForm() {
-  const { user } = useAuthUser();
+  const { id }: {id: string} = useParams();
+
+  console.log("param for books!!", id);
+  
 
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const initialFormState = {
-    name: "",
-    authors: "",
-    publisher: "",
-    datePublished: "",
-    isbn: "",
-    genre: "",
-    language: "",
-    pages: "",
-    format: "",
-    description: "",
-    price: "",
-    region: "",
-    suburb: "",
+  const initialState = {
+  id: '',
+  name: '',
+  price: 0,
+  description: '',
+  images: [],
+  imagesData: [],
+  category: '',
+  condition: '',
+  location: {region: '',suburb:''},
+  createdAt: '',
+  userId: '',
+  vendor: {image: '',name: '',uid: ''},
+  tag: '',
+  viewCount: 0,
+  vin: '',
+  mileage: '',
+  type: '',
+  author: '',
+  datePublished: '',
+  format: '',
+  genre: '',
+  isbn: '',
+  language: '',
+  pages: 0,
+  publisher: '',
   }
 
-  const [formData, setFormData] = useState<BookForm>(initialFormState);
-
-  const [images, setImages] = useState<{ file: File; preview: string }[]>([])
+  const [images, setImages] = useState<FileType[]>([])
+  const [oldImages, setOldImages] = useState<{url:string; path?:string; name:string;size:number;type:string;}[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [loading, setLoading] = useState(false);
   const [submittedData, setSubmittedData] = useState<any>(null)
+  const [product, setProduct] = useState<FirebaseProduct>(initialState);
 
   // Get suburbs for the selected region
   const getSuburbs = () => {
-    if (!formData.region) return []
-    return ghanaRegions[formData.region] || []
+    if (!product?.location?.region) return []
+    return ghanaRegions[product?.location?.region] || []
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -150,9 +179,26 @@ export default function BookForm() {
 
     // Special handling for region to reset suburb when region changes
     if (name === "region") {
-      setFormData((prev) => ({ ...prev, [name]: value, suburb: "" }))
+      setProduct((prev) => ({
+        ...prev,
+        location: {
+          ...prev.location,
+          region: value,
+        },
+      }))
+    } else if (name === "suburb") {
+      setProduct((prev) => ({
+        ...prev,
+        location: {
+          ...prev.location,
+          suburb: value,
+        },
+      }))
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }))
+      setProduct((prev) => ({
+        ...prev,
+        [name]: value,
+      }))
     }
 
     // Clear error when field is edited
@@ -192,13 +238,19 @@ export default function BookForm() {
           setErrors((prev) => ({ ...prev, images: "Each image must be 1MB or less" }))
           return null
         }
-
+       
         return {
           file,
+          fileData: {
+              url: `productImages/${id}/${file.name}`,
+              name: file.name,
+              size: file.size,
+              type: file.type,
+          },
           preview: URL.createObjectURL(file),
         }
       })
-      .filter((img): img is { file: File; preview: string } => img !== null)
+      .filter((img): img is FileType => img !== null)
 
     if (newImages.length > 0) {
       setImages((prev) => [...prev, ...newImages])
@@ -211,6 +263,15 @@ export default function BookForm() {
   }
 
   const removeImage = (index: number) => {
+    setOldImages((prev) => {
+      const newImages = [...prev]
+      // Revoke the object URL to avoid memory leaks
+      newImages.splice(index, 1)
+      return newImages
+    })
+  }
+
+  const removeNewImage = (index: number) => {
     setImages((prev) => {
       const newImages = [...prev]
       // Revoke the object URL to avoid memory leaks
@@ -224,65 +285,65 @@ export default function BookForm() {
     const newErrors: Record<string, string> = {}
 
     // Validate required fields
-    if (!formData.name.trim()) {
+    if (!product?.name.trim()) {
       newErrors.name = "Book title is required"
     }
 
-    if (!formData.authors.trim()) {
+    if (!product?.authors?.trim()) {
       newErrors.authors = "Author(s) is required"
     }
 
-    if (!formData.publisher.trim()) {
+    if (!product?.publisher?.trim()) {
       newErrors.publisher = "Publisher is required"
     }
 
-    if (!formData.datePublished.trim()) {
+    if (!product?.datePublished?.trim()) {
       newErrors.datePublished = "Publication date is required"
     }
 
-    if (!formData.isbn.trim()) {
+    if (!product?.isbn?.trim()) {
       newErrors.isbn = "ISBN is required"
-    } else if (!/^(?:\d[- ]?){9}[\dXx]$|^(?:\d[- ]?){12}\d$/.test(formData.isbn.replace(/[- ]/g, ""))) {
+    } else if (!/^(?:\d[- ]?){9}[\dXx]$|^(?:\d[- ]?){12}\d$/.test(product?.isbn.replace(/[- ]/g, ""))) {
       newErrors.isbn = "Please enter a valid ISBN-10 or ISBN-13"
     }
 
-    if (!formData.genre) {
+    if (!product?.genre) {
       newErrors.genre = "Genre is required"
     }
 
-    if (!formData.language) {
+    if (!product?.language) {
       newErrors.language = "Language is required"
     }
 
-    if (!formData.pages.trim()) {
+    if (!product?.pages) {
       newErrors.pages = "Number of pages is required"
-    } else if (isNaN(Number(formData.pages)) || Number(formData.pages) <= 0) {
+    } else if (isNaN(Number(product?.pages)) || Number(product?.pages) <= 0) {
       newErrors.pages = "Pages must be a positive number"
     }
 
-    if (!formData.format) {
+    if (!product?.format) {
       newErrors.format = "Format is required"
     }
 
-    if (!formData.description.trim()) {
+    if (!product?.description.trim()) {
       newErrors.description = "Book description is required"
     }
 
-    if (!formData.price.trim()) {
+    if (!product?.price) {
       newErrors.price = "Price is required"
-    } else if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
+    } else if (isNaN(Number(product?.price)) || Number(product?.price) <= 0) {
       newErrors.price = "Price must be a positive number"
     }
 
-    if (!formData.region) {
+    if (!product?.location?.region) {
       newErrors.region = "Region is required"
     }
 
-    if (formData.region && !formData.suburb) {
+    if (product?.location?.region && !product?.location?.suburb) {
       newErrors.suburb = "Suburb is required"
     }
 
-    if (images.length === 0) {
+    if (images.length + oldImages.length === 0) {
       newErrors.images = "At least one image is required"
     }
 
@@ -296,12 +357,11 @@ export default function BookForm() {
 
     try{
       if (validateForm()) {
-      const  three = getFirstThreeLetters("books");
-      const productId = `sg-${three}-${nanoid()}`;
 
       const uploadedImages = await Promise.all(
         images.map(async (image) => {
-          const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
+          const imageRef = ref(storage, `productImages/${id}/${image.file.name}`);
+          // if(image.file)
           await uploadBytes(imageRef, image.file);
           const downloadURL = await getDownloadURL(imageRef);
           return downloadURL;
@@ -309,67 +369,61 @@ export default function BookForm() {
       );
 
       const imagesData = await Promise.all(
-          images.map(async (image) => {
-            const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
-            const snapshot = await uploadBytes(imageRef, image.file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-            return {
-              url: downloadURL,
-              path: snapshot.ref.fullPath,
-              name: image.file.name,
-              size: image.file.size,
-              type: image.file.type,
-            };
-          })
+        images.map(async (image) => {
+          const imageRef = ref(storage, `productImages/${id}/${image.file.name}`);
+          const snapshot = await uploadBytes(imageRef, image.file);
+          const downloadURL = await getDownloadURL(snapshot.ref);
+          return {
+            url: downloadURL,
+            path: snapshot.ref.fullPath,
+            name: image.file.name,
+            size: image.file.size,
+            type: image.file.type,
+          };
+        })
       );
+
+      const oldImagesData = oldImages.map((image) => (
+        image.url
+      ))
       
       // Prepare the data object
       const bookData = {
-        id: productId,
-        name: formData.name,
-        price: Number(formData.price),
-        location: {
-          region: formData.region,
-          suburb: formData.suburb,
-        },
-        description: formData.description,
-        images: uploadedImages,
-        imagesData,
-        createdAt: serverTimestamp(),
-        authors: formData.authors,
-        publisher: formData.publisher,
-        datePublished: formData.datePublished,
-        isbn: formData.isbn,
-        genre: formData.genre,
-        language: formData.language,
-        pages: Number(formData.pages),
-        format: formData.format,
-        category: "books",
-        viewCount: [],
-        promotion: {
-          isPromoted: false,
-          datePromoted:"",
-          dateOfExpiry:"",
-          promoType: ""
-        },
-        vendor:{
-          uid: user?.uid || "",   
-          image: user?.photoURL || "",
-          name: user?.displayName || "", 
-        },
+          name: product.name,
+          price: Number(product.price),
+          location: {
+            region: product?.location?.region,
+            suburb: product?.location?.suburb,
+          },
+          description: product.description,
+          images: [ ...oldImagesData , ...uploadedImages],
+          imagesData: [...oldImages, ...imagesData],
+          authors: product.authors,
+          publisher: product.publisher,
+          datePublished: product.datePublished,
+          isbn: product.isbn,
+          genre: product.genre,
+          language: product.language,
+          pages: Number(product.pages),
+          format: product.format,
+          category: "books",
+          lastEdited: serverTimestamp(),
       }
 
       // In a real app, you would submit this data to your backend
-      console.log("Form submitted:", bookData)
+      console.log("Form submitted book form:", bookData)
 
-      await setDoc(doc(db, "productListing", productId), bookData);
+      const booksRef = doc(db, "productListing", id);
+
+      await updateDoc(booksRef, bookData);
       
       // Show the submitted data
-      setSubmittedData(bookData)
+      // setSubmittedData(bookData)
       setIsSubmitted(true)
 
-      showToast("Post added successfully","success");
-      setFormData(initialFormState);
+      showToast("Post updated successfully","success");
+      
+      // setProduct(initialState);
       router.push("/");
 
       }
@@ -389,6 +443,50 @@ export default function BookForm() {
     }
   }, [])
 
+  const fetchProductData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch the product by ID
+      const productDocRef = doc(db, "productListing", id)
+      const productDocSnap = await getDoc(productDocRef)
+     
+      if (!productDocSnap.exists()) {
+        console.log('does not exist');
+        
+        // setError("Product not found")
+        setLoading(false)
+        return
+      }
+
+      // Get the product data
+      const productData = {
+        id: productDocSnap.id,
+        ...productDocSnap.data(),
+      } as FirebaseProduct
+
+      console.log("product data for edit", productData);
+
+      const newImages = productData.imagesData.map((file) => (
+        file
+      )
+      )
+
+      setOldImages(newImages);
+      setProduct(productData);
+    } catch (err) {
+      console.error("Error fetching product:", err)
+      setError("Failed to load product. Please try again later.")
+    } finally {
+      setLoading(false)
+    }
+}
+
+  useEffect(() => { 
+    fetchProductData()
+   }, [id, router])
+
   return (
     <ProtectedRoute>
       <main className="min-h-screen bg-gray-50">
@@ -401,8 +499,8 @@ export default function BookForm() {
               Back to categories
             </Link>
 
-            <h1 className="mb-2 text-2xl font-bold">Create New Book Listing</h1>
-            <p className="mb-6 text-gray-600">Fill in the details to list your book for sale</p>
+            <h1 className="mb-2 text-2xl font-bold">Update Listing - Books</h1>
+            <p className="mb-6 text-gray-600">Update your listing details</p>
 
               <form onSubmit={handleSubmit} className="p-6 bg-white rounded-lg shadow">
                 {/* Book Title */}
@@ -414,7 +512,7 @@ export default function BookForm() {
                     type="text"
                     id="name"
                     name="name"
-                    value={formData.name}
+                    value={product?.name || ""}
                     onChange={handleChange}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                       errors.name ? "border-red-500" : "border-gray-300"
@@ -433,7 +531,7 @@ export default function BookForm() {
                     type="text"
                     id="authors"
                     name="authors"
-                    value={formData.authors}
+                    value={product?.authors || ""}
                     onChange={handleChange}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                       errors.authors ? "border-red-500" : "border-gray-300"
@@ -452,7 +550,7 @@ export default function BookForm() {
                     type="text"
                     id="publisher"
                     name="publisher"
-                    value={formData.publisher}
+                    value={product?.publisher || ""}
                     onChange={handleChange}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                       errors.publisher ? "border-red-500" : "border-gray-300"
@@ -471,7 +569,7 @@ export default function BookForm() {
                     type="date"
                     id="datePublished"
                     name="datePublished"
-                    value={formData.datePublished}
+                    value={product?.datePublished || ""}
                     onChange={handleChange}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                       errors.datePublished ? "border-red-500" : "border-gray-300"
@@ -489,7 +587,7 @@ export default function BookForm() {
                     type="text"
                     id="isbn"
                     name="isbn"
-                    value={formData.isbn}
+                    value={product?.isbn || ""}
                     onChange={handleChange}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                       errors.isbn ? "border-red-500" : "border-gray-300"
@@ -508,7 +606,7 @@ export default function BookForm() {
                     <select
                       id="genre"
                       name="genre"
-                      value={formData.genre}
+                      value={product?.genre}
                       onChange={handleChange}
                       className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                         errors.genre ? "border-red-500" : "border-gray-300"
@@ -532,7 +630,7 @@ export default function BookForm() {
                     <select
                       id="language"
                       name="language"
-                      value={formData.language}
+                      value={product?.language || ""}
                       onChange={handleChange}
                       className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                         errors.language ? "border-red-500" : "border-gray-300"
@@ -559,7 +657,7 @@ export default function BookForm() {
                       type="number"
                       id="pages"
                       name="pages"
-                      value={formData.pages}
+                      value={product?.pages || 0}
                       onChange={handleChange}
                       min="1"
                       className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
@@ -578,7 +676,7 @@ export default function BookForm() {
                     <select
                       id="format"
                       name="format"
-                      value={formData.format}
+                      value={product?.format || ""}
                       onChange={handleChange}
                       className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                         errors.format ? "border-red-500" : "border-gray-300"
@@ -604,7 +702,7 @@ export default function BookForm() {
                     type="text"
                     id="price"
                     name="price"
-                    value={formData.price}
+                    value={product?.price || 0}
                     onChange={handleChange}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                       errors.price ? "border-red-500" : "border-gray-300"
@@ -622,7 +720,7 @@ export default function BookForm() {
                   <textarea
                     id="description"
                     name="description"
-                    value={formData.description}
+                    value={product?.description || ""}
                     onChange={handleChange}
                     rows={5}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
@@ -642,7 +740,7 @@ export default function BookForm() {
                     <select
                       id="region"
                       name="region"
-                      value={formData.region}
+                      value={product?.location?.region || ""}
                       onChange={handleChange}
                       className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                         errors.region ? "border-red-500" : "border-gray-300"
@@ -659,7 +757,7 @@ export default function BookForm() {
                   </div>
 
                   {/* Suburb (conditional) */}
-                  {formData.region && (
+                  {product?.location?.region && (
                     <div>
                       <label htmlFor="suburb" className="block mb-2 text-sm font-medium text-gray-700">
                         Suburb <span className="text-red-500">*</span>
@@ -667,7 +765,7 @@ export default function BookForm() {
                       <select
                         id="suburb"
                         name="suburb"
-                        value={formData.suburb}
+                        value={product?.location?.suburb || ""}
                         onChange={handleChange}
                         className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                           errors.suburb ? "border-red-500" : "border-gray-300"
@@ -712,7 +810,7 @@ export default function BookForm() {
                         multiple
                         onChange={handleImageUpload}
                         className="hidden"
-                        disabled={images.length >= 4}
+                        disabled={oldImages.length + images.length >= 4}
                       />
                     </label>
                     {errors.images && (
@@ -724,13 +822,13 @@ export default function BookForm() {
                   </div>
 
                   {/* Image Previews */}
-                  {images.length > 0 && (
+                  {(oldImages.length + images.length > 0) && (
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                      {images.map((image, index) => (
+                      {oldImages.map((image, index) => (
                         <div key={index} className="relative">
                           <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
                             <Image
-                              src={image.preview || "/user_placeholder.png"}
+                              src={image.url}
                               alt={`Preview ${index + 1}`}
                               fill
                               className="object-cover"
@@ -744,17 +842,66 @@ export default function BookForm() {
                             <X className="w-4 h-4" />
                           </button>
                           <p className="mt-1 text-xs text-gray-500 truncate">
+                            {(image.size / 1024).toFixed(0)} KB
+                          </p>
+                        </div>
+                      ))}
+                      {(oldImages.length + images.length <= 4 && images.length > 0) && (images.map((image, index) => (
+                        <div key={index} className="relative">
+                          <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
+                            <Image
+                              src={image.preview || "/user_placeholder.png"}
+                              alt={`Preview ${index + 1}`}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeNewImage(index)}
+                            className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          <p className="mt-1 text-xs text-gray-500 truncate">
+                            {(image.file.size / 1024).toFixed(0)} KB
+                          </p>
+                        </div>
+                      )))}
+                    </div>
+                  )}
+
+                  {/* {(oldImages.length + images.length <= 4 && images.length > 0) && (
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                      {images.map((image, index) => (
+                        <div key={index} className="relative">
+                          <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
+                            <Image
+                              src={image.preview || "/user_placeholder.png"}
+                              alt={`Preview ${index + 1}`}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeNewImage(index)}
+                            className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          <p className="mt-1 text-xs text-gray-500 truncate">
                             {(image.file.size / 1024).toFixed(0)} KB
                           </p>
                         </div>
                       ))}
                     </div>
-                  )}
+                  )} */}
                 </div>
 
                 {/* Submit Button */}
                 <button type="submit" disabled={loading} className="w-full px-6 py-3 text-white bg-primary rounded-md hover:bg-primary-light">
-                  {loading ? '...loading' : 'Post Book Listing'}
+                  {loading ? '...loading' : 'Update Book Listing'}
                 </button>
               </form>
           </div>

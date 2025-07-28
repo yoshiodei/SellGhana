@@ -11,7 +11,7 @@ import NavBar from "@/components/nav-bar"
 import { logout } from "@/lib/auth/utils/logout"
 import { useParams, useRouter } from "next/navigation"
 // import { getActiveResourcesInfo } from "node:process"
-import { getUserData, getUserListings } from "@/utils/dataFetch"
+import { getUserData, getUserJobs, getUserListings, jobListing } from "@/utils/dataFetch"
 import { FirebaseProduct } from "@/lib/firebase/firestore"
 import LoadingSpinner from "@/components/loading-spinner"
 import { formatDistanceToNow } from 'date-fns';
@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const router = useRouter();
   // const { user } = useAuthUser();
   const [listings, setListings] = useState<FirebaseProduct[]>([]);
+  const [jobs, setJobs] = useState<jobListing[]>([]);
   const [loading, setLoading] = useState(false);
   // console.log("profile auth---->", user);
   const {id}:{id:string} = useParams();
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   })
 
   const [showEditModal, setShowEditModal] = useState(false)
+  const [tab, setTab] = useState< "products" | "jobs" >("products")
   
   const loadUserData = async () => {
     setLoading(true);
@@ -50,10 +52,13 @@ export default function ProfilePage() {
     });
 
     const listing = await getUserListings(id);
+    const jobs = await getUserJobs(id) 
+
+    setJobs(jobs);
     setListings(listing);
     setLoading(false);
   }
-  
+
   useEffect(() => {
     loadUserData();
   },[id]);
@@ -161,25 +166,14 @@ export default function ProfilePage() {
             {/* Profile Tabs */}
             <div className="mb-6 overflow-x-auto border-b">
               <div className="flex space-x-8">
-                <button className="px-1 py-4 text-sm font-medium border-b-2 border-primary">My Listings</button>
-                {/* <button className="px-1 py-4 text-sm font-medium text-gray-600 border-b-2 border-transparent hover:text-black">
-                  Saved
-                </button>
-                <button className="px-1 py-4 text-sm font-medium text-gray-600 border-b-2 border-transparent hover:text-black">
-                  Sold
-                </button>
-                <button className="px-1 py-4 text-sm font-medium text-gray-600 border-b-2 border-transparent hover:text-black">
-                  Purchased
-                </button>
-                <button className="px-1 py-4 text-sm font-medium text-gray-600 border-b-2 hover:text-black">
-                  Reviews
-                </button> */}
+                <button onClick={() => setTab("products")} className={`px-1 py-4 text-sm font-medium ${tab === "products" ? "border-b-2 border-primary" : ""}`}>My Products</button>
+                <button onClick={() => setTab("jobs")} className={`px-1 py-4 text-sm font-medium ${tab === "jobs" ? "border-b-2 border-primary" : ""}`}>My Jobs</button>
               </div>
             </div>
 
             {/* Listings */}
             {
-              listings.length === 0 ?
+             tab === "products"  && (listings.length === 0 ?
               (
                 <div className="container px-4 mx-auto">
                   <div>
@@ -216,8 +210,57 @@ export default function ProfilePage() {
                   </div>
                 </button>
               ))}
-            </div>)
+            </div>))
             }
+
+{/* {
+             tab === "jobs"  && (jobs.length === 0 ?
+              (
+                <div className="container px-4 mx-auto">
+                  <div>
+                    <p className="text-lg mb-5">No jobs found.</p>
+                    <button onClick={() => {router.push("/new-post/jobs")}} className="flex items-center rounded text-primary py-2 px-6 border border-primary hover:bg-primary-alt">
+                      <PlusCircle className="w-4 h-4 mr-2 text-primary" />
+                      Create New Job
+                    </button>
+                  </div>
+                </div>
+              ) :
+            (<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 ">
+              {jobs.map((item) => (
+                <button key={product.id} onClick={() => router.push(`/job/${product.id}`) } className="hover:bg-slate-100 border border-slate-400 rounded-lg p-2 flex flex-col w-full gap-y-2">
+                <div className="w-full">
+                  <div className="flex flex justify-between items-center w-full">
+                    <div className="h-[40px] flex items-center">
+                      <div className="me-[7px] w-[40px] h-[40px] rounded-full bg-slate-300 border border-slate-500 overflow-hidden">
+                        <Image  
+                          src={product.image || "/suit_case.jpg"}
+                          alt="company" 
+                          width={200}
+                          height={200}
+                          className="object-cover w-[40px] h-[40px] rounded-full"
+                        />
+                      </div>
+                      <p className="text-[0.85em] font-semibold truncate">{product.company}</p>
+                    </div>
+                    <p className="text-[0.72em] text-slate-500">{getPostedTimeFromFirestore(product.createdAt)}</p>
+                  </div>
+                </div>
+                <h5 className="text-[1em] text-left font-bold text-slate-700">{product.title}</h5>
+                <div className="flex flex-wrap gap-2">
+                  {product.skills.map((type) => (
+                    <div key={type} className="font-semibold p-1 bg-slate-300 text-slate-500 rounded text-[0.75em]">{type}</div>
+                  ))}
+                </div>
+                <div className="flex gap-2 items-center text-slate-600">
+                  <Banknote />
+                  <p className="text-[0.95em] font-semibold">{product.salary}</p>
+                </div>
+              </button>
+              ))}
+            </div>))
+            } */}
+
           </div>
         </div>
 

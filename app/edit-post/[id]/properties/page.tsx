@@ -14,10 +14,22 @@ import { showToast } from "@/utils/showToast"
 import { db, storage } from "@/lib/firebase/firebase"
 import { getFirstThreeLetters } from "@/utils/getters"
 import { nanoid } from "nanoid"
-import { doc, serverTimestamp, setDoc } from "firebase/firestore"
-import { useRouter } from "next/navigation"
-import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore"
+import { useParams, useRouter } from "next/navigation"
+import { FirebaseProduct } from "@/lib/firebase/firestore"
 
+
+interface FileType { 
+    file: File;
+    fileData: 
+    { 
+      url: string,
+      name: string,
+      size: number,
+      type: string,
+    };
+    preview: string;
+}
 
 // Form data type
 interface PropertyForm {
@@ -25,6 +37,7 @@ interface PropertyForm {
   title: string
   propertyType: string
   price: string
+  location: string
   region: string
   suburb: string
   bedrooms: string
@@ -36,7 +49,6 @@ interface PropertyForm {
   contactEmail: string
   contactPhone: string
   description: string
-  propertyLocation: string
 }
 
 // Property types
@@ -51,70 +63,86 @@ const FURNISHING_OPTIONS = ["Furnished", "Semi-furnished", "Unfurnished"]
 // Maximum file size in bytes (1MB)
 const MAX_FILE_SIZE = 1024 * 1024
 
-export default function PropertyFormPage() {
-  const { user } = useAuthUser();
-
+export default function PropertyUpdateFormPage() {
+  const { id }: {id: string} = useParams();    
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter();
 
-  const initialFormState = {
+  const initialState = {
+    id: "",
+    name: "",
     listingType: "",
     title: "",
     propertyType: "",
-    price: "",
+    price: 0,
+    location: { 
+      region: "",
+      suburb: ""  
+    },
     region: "",
     suburb: "",
-    propertyLocation: "",
-    bedrooms: "",
-    bathrooms: "",
+    bedrooms: 0,
+    bathrooms: 0,
     furnishing: "",
-    size: "",
+    size: 0,
     availabilityDate: "",
+    propertyLocation: "",
     description: "",
-    contactName: "",
-    contactEmail: "",
-    contactPhone: "",
+    images: [],
+    imagesData: [],
   }
 
-  const [formData, setFormData] = useState<PropertyForm>(initialFormState)
+//   const [formData, setFormData] = useState<PropertyForm>(initialFormState)
+  const [formData, setFormData] = useState<FirebaseProduct>(initialState)
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [submittedData, setSubmittedData] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [oldImages, setOldImages] = useState<{url:string; path?:string; name:string;size:number;type:string;}[]>([])
 
   // Get suburbs for the selected region
   const getSuburbs = () => {
-    if (!formData.region) return []
-    return ghanaRegions[formData.region] || []
+    if (!formData.location.region) return []
+    return ghanaRegions[formData.location.region] || []
   }
 
   // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-
-    // Special handling for region to reset suburb when region changes
-    if (name === "region") {
-      setFormData((prev) => ({
-        ...prev,
-        region: value,
-        suburb: "",
-      }))
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }))
-    }
-
-    // Clear error when field is edited
-    if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev }
-        delete newErrors[name]
-        return newErrors
-      })
-    }
+        const { name, value } = e.target
+    
+        // Special handling for region to reset suburb when region change
+        if (name === "region") {
+            setFormData((prev) => ({
+              ...prev,
+              location: {
+                ...prev.location,
+                region: value,
+              },
+            }))
+          } else if (name === "suburb") {
+            setFormData((prev) => ({
+              ...prev,
+              location: {
+                ...prev.location,
+                suburb: value,
+              },
+            }))
+          } else {
+            setFormData((prev) => ({
+              ...prev,
+              [name]: value,
+            }))
+          }
+    
+        // Clear error when field is edited
+        if (errors[name]) {
+          setErrors((prev) => {
+            const newErrors = { ...prev }
+            delete newErrors[name]
+            return newErrors
+          })
+        }
   }
 
   // Handle image upload
@@ -165,6 +193,15 @@ export default function PropertyFormPage() {
 
   // Remove image
   const removeImage = (index: number) => {
+    setOldImages((prev) => {
+      const newImages = [...prev]
+      // Revoke the object URL to avoid memory leaks
+      newImages.splice(index, 1)
+      return newImages
+    })
+  }
+
+  const removeNewImage = (index: number) => {
     setImages((prev) => {
       const newImages = [...prev]
       // Revoke the object URL to avoid memory leaks
@@ -183,7 +220,7 @@ export default function PropertyFormPage() {
       newErrors.listingType = "Listing type is required"
     }
 
-    if (!formData.title.trim()) {
+    if (!formData?.title?.trim()) {
       newErrors.title = "Property title is required"
     }
 
@@ -197,15 +234,15 @@ export default function PropertyFormPage() {
       newErrors.price = "Price must be a positive number"
     }
 
-    if (!formData.propertyLocation) {
-      newErrors.propertyLocation = "Property location is required"
+    if (!formData?.propertyLocation?.trim()) {
+      newErrors.propertyLocation = "Location is required"
     }
 
-    if (!formData.region) {
+    if (!formData.location.region) {
       newErrors.region = "Region is required"
     }
 
-    if (formData.region && !formData.suburb) {
+    if (formData.location.region && !formData.location.suburb) {
       newErrors.suburb = "Suburb is required"
     }
 
@@ -233,7 +270,7 @@ export default function PropertyFormPage() {
       newErrors.description = "Description is required"
     }
 
-    if (images.length === 0) {
+    if (images.length + oldImages.length === 0) {
       newErrors.images = "At least one image is required"
     }
 
@@ -248,80 +285,71 @@ export default function PropertyFormPage() {
     
     try{
     if (validateForm()) {
-      const  three = getFirstThreeLetters("property");
-        const productId = `sg-${three}-${nanoid()}`;
   
-        const uploadedImages = await Promise.all(
-          images.map(async (image) => {
-            const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
+       const uploadedImages = await Promise.all(
+            images.map(async (image) => {
+            const imageRef = ref(storage, `productImages/${id}/${image.file.name}`);
+            // if(image.file)
             await uploadBytes(imageRef, image.file);
             const downloadURL = await getDownloadURL(imageRef);
             return downloadURL;
-          })
+            })
         );
-
+    
         const imagesData = await Promise.all(
-              images.map(async (image) => {
-                const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
-                const snapshot = await uploadBytes(imageRef, image.file);
-                const downloadURL = await getDownloadURL(snapshot.ref);
-                return {
-                  url: downloadURL,
-                  path: snapshot.ref.fullPath,
-                  name: image.file.name,
-                  size: image.file.size,
-                  type: image.file.type,
-                };
-              })
-          );
+            images.map(async (image) => {
+            const imageRef = ref(storage, `productImages/${id}/${image.file.name}`);
+            const snapshot = await uploadBytes(imageRef, image.file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            return {
+                url: downloadURL,
+                path: snapshot.ref.fullPath,
+                name: image.file.name,
+                size: image.file.size,
+                type: image.file.type,
+            };
+            })
+        );
+    
+        const oldImagesData = oldImages.map((image) => (
+            image.url
+        ))
         
       // Prepare the data object
       const propertyData = {
-        id: productId,
+        id,
         listingType: formData.listingType,
         title: formData.title,
         propertyType: formData.propertyType,
         price: Number(formData.price),
         location: {
-          region: formData.region,
-          suburb: formData.suburb,
+            region: formData.location.region,
+            suburb: formData.location.suburb,
         },
-        propertyLocation: formData.propertyLocation,
         bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
         bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
         furnishing: formData.furnishing,
         size: formData.size ? Number(formData.size) : null,
         availabilityDate: formData.availabilityDate,
+        // contactName: formData.contactName,
+        // contactEmail: formData.contactEmail,
+        // contactPhone: formData.contactPhone,
+
         description: formData.description,
-        images: uploadedImages,
-        imagesData,
-        createdAt: serverTimestamp(),
-        category: "properties",
-        viewCount: [],
-        promotion: {
-          isPromoted: false,
-          datePromoted:"",
-          dateOfExpiry:"",
-          promoType: ""
-        },
-        vendor:{
-          uid: user?.uid || "",   
-          image: user?.photoURL || "",
-          name: user?.displayName || "", 
-        },
+        images: [ ...oldImagesData , ...uploadedImages],
+        imagesData: [...oldImages, ...imagesData],
+        lastEdited: serverTimestamp(),
       }
 
       // Log the collected form data
       console.log("Property Form Submission Data:", propertyData)
 
-      await setDoc(doc(db, "productListing", productId), propertyData);
-      // In a real app, you would submit this data to your backend
-      // For now, we'll just show the submitted data
-      setSubmittedData(propertyData)
-      setIsSubmitted(true)
-
-      showToast("Post added successfully","success");
-      setFormData(initialFormState);
+      const productRef = doc(db, "productListing", id);
+          
+      await updateDoc(productRef, propertyData);
+    
+      showToast("Post updated successfully","success");
+        
       router.push("/");
     }
 
@@ -342,6 +370,53 @@ export default function PropertyFormPage() {
     }
   }, [])
 
+
+   const fetchProductData = async () => {
+         try {
+           setLoading(true)
+           setError(null)
+     
+           // Fetch the product by ID
+           const productDocRef = doc(db, "productListing", id)
+           const productDocSnap = await getDoc(productDocRef)
+          
+           if (!productDocSnap.exists()) {
+             console.log('does not exist');
+             
+             // setError("Product not found")
+             setLoading(false)
+             return
+           }
+     
+           // Get the product data
+           const productData = {
+             id: productDocSnap.id,
+             ...productDocSnap.data(),
+           } as FirebaseProduct
+           
+     
+           console.log("product data for edit", productData);
+     
+           const newImages = productData.imagesData.map((file) => (
+             file
+           )
+           )
+     
+           setOldImages(newImages);
+           setFormData(productData);
+         } catch (err) {
+           console.error("Error fetching product:", err)
+           setError("Failed to load product. Please try again later.")
+         } finally {
+           setLoading(false)
+         }
+     }
+
+
+   useEffect(() => { 
+     fetchProductData()
+   }, [id, router])
+
   return (
     <ProtectedRoute>
       <main className="min-h-screen bg-gray-50">
@@ -354,8 +429,8 @@ export default function PropertyFormPage() {
               Back to categories
             </Link>
 
-            <h1 className="mb-2 text-2xl font-bold">Create Property Listing</h1>
-            <p className="mb-6 text-gray-600">Fill in the details to list your property</p>
+            <h1 className="mb-2 text-2xl font-bold">Update Listing - Properties</h1>
+            <p className="mb-6 text-gray-600">Update your listing details</p>
 
               <form onSubmit={handleSubmit} className="p-6 bg-white rounded-lg shadow">
                 {/* Listing Type */}
@@ -448,7 +523,7 @@ export default function PropertyFormPage() {
                 {/* Location */}
                 <div className="mb-4">
                   <label htmlFor="location" className="block mb-2 text-sm font-medium text-gray-700">
-                    Property Location <span className="text-red-500">*</span>
+                    Location <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -457,7 +532,7 @@ export default function PropertyFormPage() {
                     value={formData.propertyLocation}
                     onChange={handleChange}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
-                      errors.location ? "border-red-500" : "border-gray-300"
+                      errors.propertyLocation ? "border-red-500" : "border-gray-300"
                     }`}
                     placeholder="e.g., 123 Main Street"
                   />
@@ -473,7 +548,7 @@ export default function PropertyFormPage() {
                     <select
                       id="region"
                       name="region"
-                      value={formData.region}
+                      value={formData.location.region}
                       onChange={handleChange}
                       className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                         errors.region ? "border-red-500" : "border-gray-300"
@@ -490,7 +565,7 @@ export default function PropertyFormPage() {
                   </div>
 
                   {/* Suburb */}
-                  {formData.region && (
+                  {formData.location.region && (
                     <div>
                       <label htmlFor="suburb" className="block mb-2 text-sm font-medium text-gray-700">
                         Suburb <span className="text-red-500">*</span>
@@ -498,7 +573,7 @@ export default function PropertyFormPage() {
                       <select
                         id="suburb"
                         name="suburb"
-                        value={formData.suburb}
+                        value={formData.location.suburb}
                         onChange={handleChange}
                         className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                           errors.suburb ? "border-red-500" : "border-gray-300"
@@ -681,32 +756,54 @@ export default function PropertyFormPage() {
                   </div>
 
                   {/* Image Previews */}
-                  {images.length > 0 && (
+                  {(oldImages.length + images.length > 0) && (
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                      {images.map((image, index) => (
+                    {oldImages.map((image, index) => (
                         <div key={index} className="relative">
-                          <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
+                        <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
                             <Image
-                              src={image.preview || "/user_placeholder.png"}
-                              alt={`Preview ${index + 1}`}
-                              fill
-                              className="object-cover"
+                            src={image.url}
+                            alt={`Preview ${index + 1}`}
+                            fill
+                            className="object-cover"
                             />
-                          </div>
-                          <button
+                        </div>
+                        <button
                             type="button"
                             onClick={() => removeImage(index)}
                             className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
-                          >
+                        >
                             <X className="w-4 h-4" />
-                          </button>
-                          <p className="mt-1 text-xs text-gray-500 truncate">
-                            {(image.file.size / 1024).toFixed(0)} KB
-                          </p>
+                        </button>
+                        <p className="mt-1 text-xs text-gray-500 truncate">
+                            {(image.size / 1024).toFixed(0)} KB
+                        </p>
                         </div>
-                      ))}
+                    ))}
+                    {(oldImages.length + images.length <= 4 && images.length > 0) && (images.map((image, index) => (
+                        <div key={index} className="relative">
+                        <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
+                            <Image
+                            src={image.preview || "/user_placeholder.png"}
+                            alt={`Preview ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => removeNewImage(index)}
+                            className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                        <p className="mt-1 text-xs text-gray-500 truncate">
+                            {(image.file.size / 1024).toFixed(0)} KB
+                        </p>
+                        </div>
+                    )))}
                     </div>
-                  )}
+                )}
                 </div>
 
                 {/* Submit Button */}

@@ -224,17 +224,24 @@ export default function ProductPage() {
     if (product) {
       // Navigate to edit page based on product category
       const category = product.category?.toLowerCase() || "general"
-      router.push(`/edit-post/${product.id}?category=${category}`)
+      router.push(`/edit-post/${product.id}/${category}`)
     }
   }
 
   const handleDelete = () => {
     if (product) {
+
+      const imagesData = product.imagesData.map((data) => (
+        data?.path || data?.url
+      ))
+
+      console.log("Here is the images data!!!", imagesData);
+      
       dispatch(
         openDeleteProductModal({
           productId: product.id,
           productName: product.name,
-          images: product.images || [],
+          images: imagesData || [],
         }),
       )
     }
@@ -349,7 +356,7 @@ export default function ProductPage() {
 
           {/* Product Info */}
           <div className="space-y-6">
-            <h1 className="text-3xl font-bold">{product.name}</h1>
+            <h1 className="text-3xl font-bold">{product.name || product.title}</h1>
             <p className="text-2xl font-bold">GH₵{product.price.toFixed(2)}</p>
 
             <div className="flex items-center space-x-2">
@@ -361,7 +368,11 @@ export default function ProductPage() {
               </span>
             </div>
 
-            <p className="text-sm text-gray-600">{ product?.location?.region ? `Location: ${product?.location?.region}, ${product?.location?.suburb}` : `Location: ${product.location}`}</p>
+            {
+            product.propertyLocation ?  
+            (<p className="text-sm text-gray-600">{ product?.propertyLocation ? `Location: ${product?.propertyLocation}, ${product?.location?.suburb}, ${product?.location?.region}` : `Location: ${product?.propertyLocation}`}</p>) :
+            (<p className="text-sm text-gray-600">{ product?.location?.region ? `Location: ${product?.location?.region}, ${product?.location?.suburb}` : `Location: ${product.location}`}</p>)
+            }
             
             {/* Car details */}
             {(product?.type || product?.vin || product?.mileage) && (<div>
@@ -373,11 +384,24 @@ export default function ProductPage() {
               </div>
             </div>)}
 
+            {/* Property details */}
+            {(product?.category === "properties") && (<div>
+              <h3 className="mb-2 text-lg font-medium">Property Details</h3>
+              <div className="flex gap-y-1 flex-col">
+                {product?.propertyType && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Property Type:</span>{`  ${product?.propertyType}`}</p>)}
+                {product?.bedrooms && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Bedrooms:</span>{`  ${product?.bedrooms} bedroom(s)`}</p>)}
+                {product?.bathrooms && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Bathrooms:</span>{`  ${product?.bathrooms} bathroom(s)`}</p>)}
+                {product?.furnishing && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Furnishing:</span>{`  ${product?.furnishing}`}</p>)}
+                {product?.size && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Size:</span>{`  ${product?.size} (sqm)`}</p>)}
+                {product?.availabilityDate && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Availability Date:</span>{`  ${product?.availabilityDate}`}</p>)}
+              </div>
+            </div>)}
+
             {/* Book details */}
-            {(product?.author || product?.datePublished || product?.format || product?.genre || product?.isbn || product?.language || product?.pages || product?.publisher) && (<div>
+            {(product?.authors || product?.datePublished || product?.format || product?.genre || product?.isbn || product?.language || product?.pages || product?.publisher) && (<div>
               <h3 className="mb-2 text-lg font-medium">Book Detail</h3>
               <div className="flex gap-y-1 flex-col">
-                {product?.author && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Author:</span>{`  ${product?.author}`}</p>)}
+                {product?.authors && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Author:</span>{`  ${product?.authors}`}</p>)}
                 {product?.publisher && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Publisher:</span>{`  ${product?.publisher}`}</p>)}
                 {product?.datePublished && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Date Published:</span>{`  ${product?.datePublished}`}</p>)}
                 {product?.genre && (<p className="text-sm text-gray-600"><span className="font-semibold text-slate-400">Genre:</span>{`  ${product?.genre}`}</p>)}

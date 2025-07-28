@@ -14,11 +14,24 @@ import { brandsByCategory } from "@/utils/productData"
 import { nanoid } from 'nanoid'
 import { getFirstThreeLetters } from "@/utils/getters"
 import { useAuth } from "@/lib/auth/context/AuthContext"
-import { addDoc, collection, doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore"
 import { db, storage } from "@/lib/firebase/firebase"
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
 import { showToast } from "@/utils/showToast"
 import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
+import { FirebaseProduct } from "@/lib/firebase/firestore"
+
+interface FileType { 
+    file: File;
+    fileData: 
+    { 
+      url: string,
+      name: string,
+      size: number,
+      type: string,
+    };
+    preview: string;
+}
 
 const validCategories = [
   'electronics',
@@ -36,32 +49,32 @@ const validCategories = [
 // Maximum file size in bytes (1MB)
 const MAX_FILE_SIZE = 1024 * 1024
 
-export default function NewPostPage() {
+export default function EditPage() {
   const { user } = useAuthUser();
-  
+  const { id, category: categoryName }: {id: string; category: string} = useParams();
+
   console.log("vendor data ooo", user);
   
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const { category: categoryTitle }: {category: string} = useParams();  
-  console.log("category title", categoryTitle);
+  console.log("category title", categoryName);
   
   const searchParams = useSearchParams()
   const categoryId = searchParams.get("category")
   const category = categories.find((c) => c.id === categoryId)
-  const router = useRouter();
 
   const [isValid, setIsValid] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (categoryTitle && !validCategories.includes(categoryTitle)) {
+    if (categoryName && !validCategories.includes(categoryName)) {
       router.push("/not-found")
     }
-  }, [categoryTitle, router])
+  }, [categoryName, router])
 
 //   if (isValid === null) return null; // Prevent early render
 //   if (!isValid) return null; // Won't render — redirecting
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const initialFormState = {
     name: "",
@@ -74,35 +87,67 @@ export default function NewPostPage() {
     suburb: "",
   }
 
-  const [formData, setFormData] = useState(initialFormState);
+  const initialState = {
+      id: '',
+      name: '',
+      price: 0,
+      brand: '',
+      otherBrand: "",
+      description: '',
+      images: [],
+      imagesData: [],
+      condition: '',
+      location: {region: '',suburb:''},
+  }
 
+  
+  const [formData, setFormData] = useState<FirebaseProduct>(initialState)
+  const [oldImages, setOldImages] = useState<{url:string; path?:string; name:string;size:number;type:string;}[]>([])
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [submittedData, setSubmittedData] = useState<any>(null)
   const [loading, setLoading] = useState(false);
 
   // Get brands for the selected category
   const getBrands = () => {
-    if (!categoryTitle) return brandsByCategory.default
-    return brandsByCategory[categoryTitle] || brandsByCategory.default
+    if (!categoryName) return brandsByCategory.default
+    return brandsByCategory[categoryName] || brandsByCategory.default
   }
 
   // Get suburbs for the selected region
   const getSuburbs = () => {
-    if (!formData.region) return []
-    return ghanaRegions[formData.region] || []
+    if (!formData.location.region) return []
+    return ghanaRegions[formData.location.region] || []
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
 
-    // Special handling for region to reset suburb when region changes
+    // Special handling for region to reset suburb when region change
     if (name === "region") {
-      setFormData((prev) => ({ ...prev, [name]: value, suburb: "" }))
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }))
-    }
+        setFormData((prev) => ({
+          ...prev,
+          location: {
+            ...prev.location,
+            region: value,
+          },
+        }))
+      } else if (name === "suburb") {
+        setFormData((prev) => ({
+          ...prev,
+          location: {
+            ...prev.location,
+            suburb: value,
+          },
+        }))
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }))
+      }
 
     // Clear error when field is edited
     if (errors[name]) {
@@ -146,10 +191,16 @@ export default function NewPostPage() {
 
         return {
           file,
+          fileData: {
+            url: `productImages/${id}/${file.name}`,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+          },
           preview: URL.createObjectURL(file),
         }
       })
-      .filter((img): img is { file: File; preview: string } => img !== null)
+      .filter((img): img is FileType => img !== null)
 
     if (newImages.length > 0) {
       setImages((prev) => [...prev, ...newImages])
@@ -162,6 +213,15 @@ export default function NewPostPage() {
   }
 
   const removeImage = (index: number) => {
+    setOldImages((prev) => {
+      const newImages = [...prev]
+      // Revoke the object URL to avoid memory leaks
+      newImages.splice(index, 1)
+      return newImages
+    })
+  }
+
+  const removeNewImage = (index: number) => {
     setImages((prev) => {
       const newImages = [...prev]
       // Revoke the object URL to avoid memory leaks
@@ -175,38 +235,39 @@ export default function NewPostPage() {
     const newErrors: Record<string, string> = {}
 
     // Validate required fields
-    if (!formData.name.trim()) {
+    if (!formData?.name.trim()) {
       newErrors.name = "Product name is required"
     }
 
-    if (!formData.price.trim()) {
-      newErrors.price = "Price is required"
-    } else if (isNaN(Number.parseFloat(formData.price)) || Number.parseFloat(formData.price) <= 0) {
-      newErrors.price = "Price must be a positive number"
+
+    if (!formData?.price) {
+        newErrors.price = "Price is required"
+      } else if (isNaN(Number(formData?.price)) || Number(formData?.price) <= 0) {
+        newErrors.price = "Price must be a positive number"
     }
 
-    if (!formData.brand) {
+    if (!formData?.brand) {
       newErrors.brand = "Brand is required"
     }
 
-    if (formData.brand === "Other" && !formData.otherBrand.trim()) {
+    if (formData?.brand === "Other" && !formData?.otherBrand?.trim()) {
       newErrors.otherBrand = "Please specify the brand"
     }
 
-    if (!formData.description.trim()) {
+    if (!formData?.description.trim()) {
       newErrors.description = "Product details are required"
     }
 
-    if (!formData.region) {
+    if (!formData?.location.region) {
       newErrors.region = "Region is required"
     }
 
-    if (formData.region && !formData.suburb) {
+    if (formData?.location.region && !formData?.location.suburb) {
       newErrors.suburb = "Suburb is required"
     }
 
-    if (images.length === 0) {
-      newErrors.images = "At least one image is required"
+    if (images.length + oldImages.length === 0) {
+        newErrors.images = "At least one image is required"
     }
 
     setErrors(newErrors)
@@ -220,77 +281,70 @@ export default function NewPostPage() {
     try{
         if (validateForm()) {
         // Prepare the data object
-        const finalBrand = formData.brand === "Other" ? formData.otherBrand : formData.brand
-        // get first three letters of category and add to id string
-        const three = getFirstThreeLetters(categoryTitle);
-        const productId = `sg-${three}-${nanoid()}`;
+        const finalBrand = formData?.brand === "Other" ? formData?.otherBrand : formData?.brand
 
         const uploadedImages = await Promise.all(
-            images.map(async (image) => {
-              const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
-              await uploadBytes(imageRef, image.file);
-              const downloadURL = await getDownloadURL(imageRef);
-              return downloadURL;
-            })
-          );
-
-          const imagesData = await Promise.all(
-              images.map(async (image) => {
-                const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
-                const snapshot = await uploadBytes(imageRef, image.file);
-                const downloadURL = await getDownloadURL(snapshot.ref);
-                return {
-                  url: downloadURL,
-                  path: snapshot.ref.fullPath,
-                  name: image.file.name,
-                  size: image.file.size,
-                  type: image.file.type,
-                };
-              })
-          );
+                images.map(async (image) => {
+                  const imageRef = ref(storage, `productImages/${id}/${image.file.name}`);
+                  // if(image.file)
+                  await uploadBytes(imageRef, image.file);
+                  const downloadURL = await getDownloadURL(imageRef);
+                  return downloadURL;
+                })
+              );
+        
+              const imagesData = await Promise.all(
+                images.map(async (image) => {
+                  const imageRef = ref(storage, `productImages/${id}/${image.file.name}`);
+                  const snapshot = await uploadBytes(imageRef, image.file);
+                  const downloadURL = await getDownloadURL(snapshot.ref);
+                  return {
+                    url: downloadURL,
+                    path: snapshot.ref.fullPath,
+                    name: image.file.name,
+                    size: image.file.size,
+                    type: image.file.type,
+                  };
+                })
+              );
+        
+              const oldImagesData = oldImages.map((image) => (
+                image.url
+              ))
+              
 
           
-
+        // Prepare the data object
         const productData = {
-            id: productId,
+            id,
             name: formData.name,
-            price: Number.parseFloat(formData.price),
+            price: Number(formData.price),
             brand: finalBrand,
             condition: formData.condition,
             description: formData.description,
             location: {
-            region: formData.region,
-            suburb: formData.suburb,
+              region: formData.location.region,
+              suburb: formData.location.suburb,
             },
-            promotion: {
-            isPromoted: false,
-            datePromoted:"",
-            dateOfExpiry:"",
-            promoType: ""
-            },
-            images: uploadedImages,
-            imagesData,
-            vendor:{
-            uid: user?.uid || "",   
-            image: user?.photoURL || "",
-            name: user?.displayName || "", 
-            },
-            category: categoryTitle || "uncategorized",
-            viewCount: [],
-            createdAt: serverTimestamp(),
+            images: [ ...oldImagesData , ...uploadedImages],
+            imagesData: [...oldImages, ...imagesData],
+            category: categoryName,
+            lastEdited: serverTimestamp(),
         }
 
-          console.log("Form submitted:", productData)
+          console.log("Form submitted for edit:", productData)
 
-          setSubmittedData(productData)
-          setIsSubmitted(false);
+          const productRef = doc(db, "productListing", id);
 
-          //   await addDoc(collection(db, "productListing"), productData);
-          //   await addDoc(collection(db, "productListing"), productData);
-          await setDoc(doc(db, "productListing", productId), productData);
+          await updateDoc(productRef, productData);
 
-          showToast("Post added successfully","success");
-          setFormData(initialFormState);
+        //   setSubmittedData(productData)
+        //   setIsSubmitted(false);
+
+        //   await setDoc(doc(db, "productListing", productId), productData);
+
+          showToast("Post updated successfully","success");
+          // setFormData(initialState);
           router.push("/");
         }
 
@@ -301,6 +355,56 @@ export default function NewPostPage() {
         console.error('Error submitting listing:', error);
     }
   }
+  
+  useEffect(() => {
+      return () => {
+        images.forEach((image) => URL.revokeObjectURL(image.preview))
+      }
+  }, [])
+
+  const fetchProductData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+  
+        // Fetch the product by ID
+        const productDocRef = doc(db, "productListing", id)
+        const productDocSnap = await getDoc(productDocRef)
+        
+        if (!productDocSnap.exists()) {
+          console.log('does not exist');
+          
+          // setError("Product not found")
+          setLoading(false)
+          return
+        }
+  
+        // Get the product data
+        const productData = {
+          id: productDocSnap.id,
+          ...productDocSnap.data(),
+        } as FirebaseProduct
+  
+        console.log("product data for edit", productData);
+  
+        const newImages = productData.imagesData.map((file) => (
+          file
+        )
+        )
+  
+        setOldImages(newImages);
+        setFormData(productData);
+      } catch (err) {
+        console.error("Error fetching product:", err)
+        setError("Failed to load product. Please try again later.")
+      } finally {
+        setLoading(false)
+      }
+  }
+  
+    useEffect(() => { 
+      fetchProductData()
+     }, [id, router])
 
   return (
     <ProtectedRoute>
@@ -314,8 +418,8 @@ export default function NewPostPage() {
               Back to categories
             </Link>
 
-            <h1 className="mb-2 text-2xl font-bold capitalize">Create New Listing {categoryTitle ? `- ${categoryTitle}` : ""}</h1>
-            <p className="mb-6 text-gray-600">Fill in the details to create your listing</p>
+            <h1 className="mb-2 text-2xl font-bold capitalize">Update Listing {categoryName ? `- ${categoryName}` : ""}</h1>
+            <p className="mb-6 text-gray-600">Update your listing details</p>
 
               <form onSubmit={handleSubmit} className="p-6 bg-white rounded-lg shadow">
                 {/* Product Name */}
@@ -427,7 +531,7 @@ export default function NewPostPage() {
                   <select
                     id="region"
                     name="region"
-                    value={formData.region}
+                    value={formData.location.region}
                     onChange={handleChange}
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                       errors.region ? "border-red-500" : "border-gray-300"
@@ -444,7 +548,7 @@ export default function NewPostPage() {
                 </div>
 
                 {/* Suburb (conditional) */}
-                {formData.region && (
+                {formData.location.region && (
                   <div className="mb-4">
                     <label htmlFor="suburb" className="block mb-2 text-sm font-medium text-gray-700">
                       Suburb <span className="text-red-500">*</span>
@@ -452,7 +556,7 @@ export default function NewPostPage() {
                     <select
                       id="suburb"
                       name="suburb"
-                      value={formData.suburb}
+                      value={formData.location.suburb}
                       onChange={handleChange}
                       className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                         errors.suburb ? "border-red-500" : "border-gray-300"
@@ -515,7 +619,7 @@ export default function NewPostPage() {
                         multiple
                         onChange={handleImageUpload}
                         className="hidden"
-                        disabled={images.length >= 4}
+                        disabled={oldImages.length + images.length >= 4}
                       />
                     </label>
                     {errors.images && (
@@ -527,32 +631,54 @@ export default function NewPostPage() {
                   </div>
 
                   {/* Image Previews */}
-                  {images.length > 0 && (
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                      {images.map((image, index) => (
-                        <div key={index} className="relative">
-                          <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
-                            <Image
-                              src={image.preview || "/user_placeholder.png"}
-                              alt={`Preview ${index + 1}`}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                          <p className="mt-1 text-xs text-gray-500 truncate">
-                            {(image.file.size / 1024).toFixed(0)} KB
-                          </p>
+                  {(oldImages.length + images.length > 0) && (
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                        {oldImages.map((image, index) => (
+                            <div key={index} className="relative">
+                            <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
+                                <Image
+                                src={image.url}
+                                alt={`Preview ${index + 1}`}
+                                fill
+                                className="object-cover"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <p className="mt-1 text-xs text-gray-500 truncate">
+                                {(image.size / 1024).toFixed(0)} KB
+                            </p>
+                            </div>
+                        ))}
+                        {(oldImages.length + images.length <= 4 && images.length > 0) && (images.map((image, index) => (
+                            <div key={index} className="relative">
+                            <div className="relative overflow-hidden bg-gray-100 rounded-lg aspect-square">
+                                <Image
+                                src={image.preview || "/user_placeholder.png"}
+                                alt={`Preview ${index + 1}`}
+                                fill
+                                className="object-cover"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => removeNewImage(index)}
+                                className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <p className="mt-1 text-xs text-gray-500 truncate">
+                                {(image.file.size / 1024).toFixed(0)} KB
+                            </p>
+                            </div>
+                        )))}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                    )}
                 </div>
 
                 {/* Submit Button */}

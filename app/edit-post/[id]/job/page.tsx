@@ -12,11 +12,12 @@ import ProtectedRoute from "@/lib/auth/ProtectedRoutes"
 import { db, storage } from "@/lib/firebase/firebase"
 import { ghanaRegions } from "@/lib/ghana-regions"
 import { showToast } from "@/utils/showToast"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { getFirstThreeLetters } from "@/utils/getters"
 import { nanoid } from "nanoid"
-import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore"
 import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
+import { FirebaseProduct } from "@/lib/firebase/firestore"
 
 // Form data type
 interface JobForm {
@@ -46,6 +47,18 @@ interface JobForm {
 interface ImageType { 
   file: File 
   preview: string 
+}
+
+interface FileType { 
+  file: File;
+  fileData: 
+  { 
+    url: string,
+    name: string,
+    size: number,
+    type: string,
+  };
+  preview: string;
 }
 
 // Job categories
@@ -168,24 +181,41 @@ const SKILLS_BY_CATEGORY: Record<string, string[]> = {
 // Maximum file size in bytes (1MB)
 const MAX_FILE_SIZE = 1024 * 1024
 
-export default function NewJobPostPage() {
+export default function JobPostUpdatePage() {
   const router = useRouter();
   const { user } = useAuthUser();
+  const { id }: {id: string} = useParams();
+
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const initialFormState = {
+    id: "",
+    name: "",
     title: "",
     company: "",
     category: "",
     otherCategory: "",
+    price: 0,
     isRemote: false,
-    region: "",
-    suburb: "",
+    productLocation: "",
+    location: {
+        region:"",
+        suburb: "",
+    },
     description: "",
-    salaryMin: "",
-    salaryMax: "",
+    salaryDetails: {
+      salaryMin: 0,
+      salaryMax: 0,
+    },
     email: "",
     phone: "",
+    contact: {
+      email:"",
+      phone: "",
+    },
+    imageData: {url: '', size: 0, type: '', path: '', name: ''},
+    imagesData: [],
+    images: [],
     applicationDeadline: "",
     experience: "",
     employmentType: "",
@@ -196,11 +226,13 @@ export default function NewJobPostPage() {
       uid: ""
     }
   };
-  const [formData, setFormData] = useState<JobForm>(initialFormState)
+  const [formData, setFormData] = useState<FirebaseProduct>(initialFormState)
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [customSkill, setCustomSkill] = useState("")
-  const [image, setImage] = useState<ImageType | null>(null)
+  // const [image, setImage] = useState<FileType | null>(null)
+  const [imageData, setImageData] = useState<{url?:string, path?:string, name?:string, size?:number, type?:string} | null>({url:'', path:'', name: '', size: 0, type: ''});
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [submittedData, setSubmittedData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -213,8 +245,8 @@ export default function NewJobPostPage() {
 
   // Get suburbs for the selected region
   const getSuburbs = () => {
-    if (!formData.region) return []
-    return ghanaRegions[formData.region] || []
+    if (!formData.location.region) return []
+    return ghanaRegions[formData.location.region] || []
   }
 
   // Handle form field changes
@@ -230,7 +262,7 @@ export default function NewJobPostPage() {
         setFormData((prev) => ({
           ...prev,
           isRemote: checked,
-          ...(checked ? { region: "", suburb: "" } : {}),
+          ...(checked ? { location:{region: "", suburb: ""}} : {}),
         }))
       } else {
         setFormData((prev) => ({
@@ -243,8 +275,30 @@ export default function NewJobPostPage() {
     else if (name === "region") {
       setFormData((prev) => ({
         ...prev,
+        location:{
         region: value,
         suburb: "",
+        }
+      }))
+    }
+
+    else if (name === "suburb") {
+      setFormData((prev) => ({
+        ...prev,
+        location:{
+        ...formData.location,
+        suburb: value,
+        }
+      }))
+    }
+
+    else if (name === "salaryMin" || name === "salaryMax") {
+      setFormData((prev) => ({
+        ...prev,
+        salaryDetails:{
+          ...formData.salaryDetails,  
+          [name]: value,
+        }
       }))
     }
     // Handle all other inputs
@@ -279,7 +333,7 @@ export default function NewJobPostPage() {
   }
 
   // Handle image upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
@@ -301,15 +355,27 @@ export default function NewJobPostPage() {
     }
 
     // If there was a previous image, revoke its object URL
-    if (image) {
-      URL.revokeObjectURL(image.preview)
-    }
+    // if (image) {
+    //   URL.revokeObjectURL(image.preview)
+    // }
 
     // Set the new image
-    setImage({
-      file,
-      preview: URL.createObjectURL(file),
-    })
+    // setImage({
+    //   file,
+    //   preview: URL.createObjectURL(file),
+    // })
+    const imageRef = ref(storage, `productImages/${id}/${file.name}`);
+    const snapshot = await uploadBytes(imageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    setImageData({
+      url: downloadURL,
+      path: snapshot.ref.fullPath,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      }
+    )
 
     // Reset the file input
     if (fileInputRef.current) {
@@ -319,9 +385,9 @@ export default function NewJobPostPage() {
 
   // Remove the uploaded image
   const removeImage = () => {
-    if (image) {
-      URL.revokeObjectURL(image.preview)
-      setImage(null)
+    if (imageData) {
+      // URL.revokeObjectURL(image.preview)
+      setImageData(null)
     }
   }
 
@@ -330,11 +396,11 @@ export default function NewJobPostPage() {
     const newErrors: Record<string, string> = {}
 
     // Required fields
-    if (!formData.title.trim()) {
+    if (!formData?.title?.trim()) {
       newErrors.title = "Job title is required"
     }
 
-    if (!formData.company.trim()) {
+    if (!formData?.company?.trim()) {
       newErrors.company = "Company name is required"
     }
 
@@ -344,10 +410,10 @@ export default function NewJobPostPage() {
 
     // Location validation
     if (!formData.isRemote) {
-      if (!formData.region) {
+      if (!formData.location.region) {
         newErrors.region = "Region is required for non-remote jobs"
       }
-      if (formData.region && !formData.suburb) {
+      if (formData.location.region && !formData.location.suburb) {
         newErrors.suburb = "Suburb is required for non-remote jobs"
       }
     }
@@ -356,16 +422,16 @@ export default function NewJobPostPage() {
       newErrors.description = "Job description is required"
     }
 
-    const regex = /^https?:\/\/[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+([\/\w\-._~:?#[\]@!$&'()*+,;=]*)?$/;
+    const webLink = /^https?:\/\/[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+([\/\w\-._~:?#[\]@!$&'()*+,;=]*)?$/;
 
-    if (formData.externalLink && !regex.test(formData.externalLink)) {
+    if (formData.externalLink && !webLink.test(formData.externalLink)) {
       newErrors.externalLink = "URL entered is invalid"
     }
 
     // Salary validation
-    if (formData.salaryMin && formData.salaryMax) {
-      const min = Number(formData.salaryMin)
-      const max = Number(formData.salaryMax)
+    if (formData?.salaryDetails?.salaryMin && formData?.salaryDetails?.salaryMax) {
+      const min = Number(formData?.salaryDetails?.salaryMin)
+      const max = Number(formData?.salaryDetails?.salaryMax)
       if (isNaN(min) || min <= 0) {
         newErrors.salaryMin = "Minimum salary must be a positive number"
       }
@@ -375,20 +441,20 @@ export default function NewJobPostPage() {
       if (min > max) {
         newErrors.salaryRange = "Minimum salary cannot be greater than maximum salary"
       }
-    } else if (formData.salaryMin && !formData.salaryMax) {
-      const min = Number(formData.salaryMin)
+    } else if (formData?.salaryDetails?.salaryMin && !formData?.salaryDetails?.salaryMax) {
+      const min = Number(formData?.salaryDetails?.salaryMin)
       if (isNaN(min) || min <= 0) {
         newErrors.salaryMin = "Minimum salary must be a positive number"
       }
-    } else if (!formData.salaryMin && formData.salaryMax) {
-      const max = Number(formData.salaryMax)
+    } else if (!formData?.salaryDetails?.salaryMin && formData?.salaryDetails?.salaryMax) {
+      const max = Number(formData?.salaryDetails?.salaryMax)
       if (isNaN(max) || max <= 0) {
         newErrors.salaryMax = "Maximum salary must be a positive number"
       }
     }
 
     // Email validation
-    if (!formData.email.trim()) {
+    if (!formData?.email?.trim()) {
       newErrors.email = "Email is required"
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address"
@@ -427,6 +493,10 @@ export default function NewJobPostPage() {
       newErrors.skills = "At least one skill is required"
     }
 
+    if(!imageData) {
+      newErrors.image = "Image has not been set"
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -434,43 +504,33 @@ export default function NewJobPostPage() {
   // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true);
 
     try{
     if (validateForm()) {
       const  three = getFirstThreeLetters("jobs");
         const productId = `sg-${three}-${nanoid()}`;
+        setLoading(true);
 
-      const uploadSingleImage = async (image: ImageType | null, productId: string) => {
-        if(!image){
-          return null;
-        }
+      // const uploadSingleImage = async (image: ImageType | null, productId: string) => {
+      //   if(!image){
+      //     return null;
+      //   }
 
-        const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
-        const snapshot = await uploadBytes(imageRef, image.file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
+      //   const imageRef = ref(storage, `productImages/${productId}/${image.file.name}`);
+      //   await uploadBytes(imageRef, image.file);
+      //   const downloadURL = await getDownloadURL(imageRef);
+      //   return downloadURL;
+      // };
 
-        return {
-          downloadURL,
-          imageData: {
-            url: downloadURL,
-            path: snapshot.ref.fullPath,
-            name: image.file.name,
-            size: image.file.size,
-            type: image.file.type,
-          }
-        };
-      };
-
-      const uploadImage = await uploadSingleImage(image,productId);
+      // const uploadImage = await uploadSingleImage(image,productId);
 
       // Prepare the data object
       const jobData = {
-        id: productId,
+        id,
         title: formData.title,
         company: formData.company,
         category: formData.category,
-        location: {suburb: formData.suburb, region: formData.region },
+        location: {region: formData.location.region, suburb: formData.location.suburb},
         isRemote: formData.isRemote,
         description: formData.description,
         salary:
@@ -486,35 +546,31 @@ export default function NewJobPostPage() {
           salaryMax: formData.salaryMax ? Number(formData.salaryMax) : null,
         },
         skills: selectedSkills,
-        email: formData.email,
-        phone: formData.phone || "",
+        contact: {
+          email: formData.email,
+          phone: formData.phone || "Not provided",
+        },
         applicationDeadline: formData.applicationDeadline,
         experience: formData.experience,
         employmentType: formData.employmentType,
-        image: uploadImage?.downloadURL,
-        imageData: uploadImage?.imageData,
-        createdAt: serverTimestamp(),
+        lastUpdated: serverTimestamp(),
         externalLink: formData.externalLink,
-        vendor: {
-            uid: user?.uid || "",   
-            image: user?.photoURL || "",
-            name: user?.displayName || "",
-        }
+        imageData,
+        image: imageData?.url || "",
       }
 
       // In a real app, you would submit this data to your backend
       console.log("Job posting submitted:", jobData)
 
-      await setDoc(doc(db, "jobListing", productId), jobData);
+      //   await setDoc(doc(db, "jobListing", productId), jobData);
       
       // Show the submitted data
       // setSubmittedData(jobData)
       // setIsSubmitted(true)
 
-      showToast("Post added successfully","success");
-      setLoading(false);
-      setFormData(initialFormState);
-      router.push("/jobs");
+      showToast("Post updated successfully","success");
+      //   setFormData(initialFormState);
+      //   router.push("/jobs");
 
     }
     setLoading(false);
@@ -526,13 +582,58 @@ export default function NewJobPostPage() {
   }
 
   // Clean up object URLs when component unmounts
-  useEffect(() => {
-    return () => {
-      if (image) {
-        URL.revokeObjectURL(image.preview)
+  // useEffect(() => {
+  //   return () => {
+  //     if (image) {
+  //       URL.revokeObjectURL(image.preview)
+  //     }
+  //   }
+  // }, [])
+
+   const fetchProductData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+  
+        // Fetch the product by ID
+        const productDocRef = doc(db, "jobListing", id)
+        const productDocSnap = await getDoc(productDocRef)
+       
+        if (!productDocSnap.exists()) {
+          console.log('does not exist');
+          // setError("Product not found")
+          setLoading(false)
+          return
+        }
+  
+        // Get the product data
+        const productData = {
+          id: productDocSnap.id,
+          ...productDocSnap.data(),
+        } as FirebaseProduct
+  
+        console.log("product data for edit", productData);
+
+        if(productData?.skills && productData?.skills?.length > 0){
+          setSelectedSkills(productData?.skills);
+        } else {
+          setSelectedSkills([]);  
+        }
+        
+        const imageDataObj = productData?.imageData || null
+        setImageData(imageDataObj);
+        setFormData(productData);
+      } catch (err) {
+        console.error("Error fetching product:", err)
+        setError("Failed to load product. Please try again later.")
+      } finally {
+        setLoading(false)
       }
-    }
-  }, [])
+  }
+
+  useEffect(() => { 
+    fetchProductData()
+  }, [id, router])
 
   return (
     <ProtectedRoute>
@@ -546,36 +647,10 @@ export default function NewJobPostPage() {
               Back to categories
             </Link>
 
-            <h1 className="mb-2 text-2xl font-bold">Create Job Listing</h1>
-            <p className="mb-6 text-gray-600">Fill in the details to post a new job opportunity</p>
+            <h1 className="mb-2 text-2xl font-bold">Update Listing - Job</h1>
+            <p className="mb-6 text-gray-600">Update job listing detail</p>
 
-            {isSubmitted ? (
-              <div className="p-6 bg-white rounded-lg shadow">
-                <div className="flex items-center mb-4 text-green-600">
-                  <Check className="w-6 h-6 mr-2" />
-                  <h2 className="text-xl font-semibold">Job Posted Successfully!</h2>
-                </div>
-
-                <div className="p-4 mb-6 bg-gray-50 rounded-lg">
-                  <h3 className="mb-2 font-medium">Job Details:</h3>
-                  <pre className="p-4 overflow-auto text-sm bg-gray-100 rounded">
-                    {JSON.stringify(submittedData, null, 2)}
-                  </pre>
-                </div>
-
-                <div className="flex justify-between">
-                  <Link
-                    href="/new-post/job"
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100"
-                  >
-                    Post Another Job
-                  </Link>
-                  <Link href="/" className="px-4 py-2 text-white bg-black rounded-md hover:bg-gray-800">
-                    Go to Home
-                  </Link>
-                </div>
-              </div>
-            ) : (
+             
               <form onSubmit={handleSubmit} className="p-6 bg-white rounded-lg shadow">
                 {/* Job Title */}
                 <div className="mb-4">
@@ -686,7 +761,7 @@ export default function NewJobPostPage() {
                         <select
                           id="region"
                           name="region"
-                          value={formData.region}
+                          value={formData.location.region}
                           onChange={handleChange}
                           className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                             errors.region ? "border-red-500" : "border-gray-300"
@@ -703,7 +778,7 @@ export default function NewJobPostPage() {
                       </div>
 
                       {/* Suburb */}
-                      {formData.region && (
+                      {formData.location.region && (
                         <div>
                           <label htmlFor="suburb" className="block mb-2 text-sm font-medium text-gray-700">
                             Suburb <span className="text-red-500">*</span>
@@ -711,7 +786,7 @@ export default function NewJobPostPage() {
                           <select
                             id="suburb"
                             name="suburb"
-                            value={formData.suburb}
+                            value={formData.location.suburb}
                             onChange={handleChange}
                             className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                               errors.suburb ? "border-red-500" : "border-gray-300"
@@ -759,7 +834,7 @@ export default function NewJobPostPage() {
                         type="number"
                         id="salaryMin"
                         name="salaryMin"
-                        value={formData.salaryMin}
+                        value={formData?.salaryDetails?.salaryMin}
                         onChange={handleChange}
                         placeholder="Minimum"
                         className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
@@ -773,7 +848,7 @@ export default function NewJobPostPage() {
                         type="number"
                         id="salaryMax"
                         name="salaryMax"
-                        value={formData.salaryMax}
+                        value={formData?.salaryDetails?.salaryMax}
                         onChange={handleChange}
                         placeholder="Maximum"
                         className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
@@ -1010,7 +1085,7 @@ export default function NewJobPostPage() {
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="hidden"
-                        disabled={!!image}
+                        disabled={!!imageData?.url}
                       />
                     </label>
                     {errors.image && (
@@ -1022,10 +1097,10 @@ export default function NewJobPostPage() {
                   </div>
 
                   {/* Image Preview */}
-                  {image && (
+                  {imageData?.url && (
                     <div className="relative w-32 h-32 overflow-hidden bg-gray-100 rounded-lg">
                       <Image
-                        src={image.preview || "/user_placeholder.png"}
+                        src={imageData.url || "/user_placeholder.png"}
                         alt="Company logo preview"
                         fill
                         className="object-contain"
@@ -1037,9 +1112,9 @@ export default function NewJobPostPage() {
                       >
                         <X className="w-4 h-4" />
                       </button>
-                      <p className="absolute bottom-0 left-0 right-0 px-2 py-1 text-xs text-center text-white bg-black bg-opacity-50">
-                        {(image.file.size / 1024).toFixed(0)} KB
-                      </p>
+                      {(imageData?.size) && (<p className="absolute bottom-0 left-0 right-0 px-2 py-1 text-xs text-center text-white bg-black bg-opacity-50">
+                        {(imageData?.size / 1024).toFixed(0)} KB
+                      </p>)}
                     </div>
                   )}
                 </div>
@@ -1049,7 +1124,6 @@ export default function NewJobPostPage() {
                   {loading ? "...loading" : "Post Job"}
                 </button>
               </form>
-            )}
           </div>
         </div>
       </main>
