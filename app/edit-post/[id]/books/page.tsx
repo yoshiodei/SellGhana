@@ -484,7 +484,7 @@ export default function BookForm() {
 }
 
   useEffect(() => { 
-    fetchProductData()
+      fetchProductData()
    }, [id, router])
 
   return (

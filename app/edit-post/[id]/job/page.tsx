@@ -15,7 +15,7 @@ import { showToast } from "@/utils/showToast"
 import { useParams, useRouter } from "next/navigation"
 import { getFirstThreeLetters } from "@/utils/getters"
 import { nanoid } from "nanoid"
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore"
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore"
 import { useAuthUser } from "@/lib/auth/hooks/useAuthUser"
 import { FirebaseProduct } from "@/lib/firebase/firestore"
 
@@ -507,8 +507,6 @@ export default function JobPostUpdatePage() {
 
     try{
     if (validateForm()) {
-      const  three = getFirstThreeLetters("jobs");
-        const productId = `sg-${three}-${nanoid()}`;
         setLoading(true);
 
       // const uploadSingleImage = async (image: ImageType | null, productId: string) => {
@@ -562,7 +560,9 @@ export default function JobPostUpdatePage() {
       // In a real app, you would submit this data to your backend
       console.log("Job posting submitted:", jobData)
 
-      //   await setDoc(doc(db, "jobListing", productId), jobData);
+      const jobsRef = doc(db, "jobListing", id);
+
+      await updateDoc(jobsRef, jobData);
       
       // Show the submitted data
       // setSubmittedData(jobData)
@@ -570,7 +570,7 @@ export default function JobPostUpdatePage() {
 
       showToast("Post updated successfully","success");
       //   setFormData(initialFormState);
-      //   router.push("/jobs");
+        router.push("/jobs");
 
     }
     setLoading(false);
